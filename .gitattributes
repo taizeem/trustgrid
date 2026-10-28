@@ -1,8 +1,9 @@
-* text=auto
-*.py text eol=lf
-*.go text eol=lf
-*.rs text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
+# Set default behavior to normalize all files to LF in version control
+* text=auto eol=lf
+
+# Explicitly keep shell scripts and docker entrypoints as LF
 *.sh text eol=lf
+*.sql text eol=lf
+
+# Keep PowerShell scripts native
 *.ps1 text eol=crlf
