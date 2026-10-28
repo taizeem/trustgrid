@@ -10,6 +10,7 @@ dependencies = [
     "psycopg[binary]>=3.2.1",
     "django-environ>=0.11.2",
     "pydantic>=2.8.2",
+    "pyjwt[crypto]>=2.9.0",
 ]
 
 [dependency-groups]
