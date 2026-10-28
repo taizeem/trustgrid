@@ -6,23 +6,11 @@ services:
       POSTGRES_USER: ${POSTGRES_SUPERUSER:-trustgrid_admin}
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-trustgrid_secure_password_dev}
       POSTGRES_DB: postgres
-      IDENTITY_DB_NAME: ${IDENTITY_DB_NAME:-trustgrid_identity}
-      IDENTITY_DB_USER: ${IDENTITY_DB_USER:-identity_user}
-      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity_secure_pass_dev}
-      VENDOR_DB_NAME: ${VENDOR_DB_NAME:-trustgrid_vendor}
-      VENDOR_DB_USER: ${VENDOR_DB_USER:-vendor_user}
-      VENDOR_DB_PASSWORD: ${VENDOR_DB_PASSWORD:-vendor_secure_pass_dev}
-      WORKFLOW_DB_NAME: ${WORKFLOW_DB_NAME:-trustgrid_workflow}
-      WORKFLOW_DB_USER: ${WORKFLOW_DB_USER:-workflow_user}
-      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:-workflow_secure_pass_dev}
-      RISK_DB_NAME: ${RISK_DB_NAME:-trustgrid_risk}
-      RISK_DB_USER: ${RISK_DB_USER:-risk_user}
-      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD:-risk_secure_pass_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./infrastructure/docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-trustgrid_admin} -d postgres"]
       interval: 5s
@@ -56,7 +44,7 @@ services:
     container_name: trustgrid_redis
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-trustgrid_redis_pass_dev}"]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
