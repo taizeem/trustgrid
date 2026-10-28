@@ -1,0 +1,25 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":8000"
+  traefik:
+    address: ":8080"
+
+providers:
+  file:
+    filename: "/etc/traefik/dynamic_conf.yaml"
+    watch: true

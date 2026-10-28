@@ -1,0 +1,64 @@
+http:
+  routers:
+    # Identity & Auth Router
+    identity-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/organizations`)"
+      service: identity-service
+      middlewares:
+        - correlation-id
+        - rate-limit
+        - cors-headers
+
+    # Vendor & Assessment Router
+    vendor-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/vendors`) || PathPrefix(`/api/v1/templates`) || PathPrefix(`/api/v1/assessments`)"
+      service: vendor-service
+      middlewares:
+        - correlation-id
+        - cors-headers
+
+  middlewares:
+    # Injects correlation ID for distributed tracing
+    correlation-id:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "http"
+
+    # Rate limiting on authentication routes
+    rate-limit:
+      rateLimit:
+        average: 50
+        burst: 100
+
+    # Cross-Origin Resource Sharing
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-Correlation-ID
+          - X-Tenant-ID
+        accessControlMaxAge: 3600
+        addVaryHeader: true
+
+  services:
+    identity-service:
+      loadBalancer:
+        servers:
+          - url: "http://identity-service:8001"
+
+    vendor-service:
+      loadBalancer:
+        servers:
+          - url: "http://vendor-assessment-service:8002"
