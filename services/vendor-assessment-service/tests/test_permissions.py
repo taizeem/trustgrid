@@ -21,8 +21,8 @@ def test_cross_tenant_vendor_isolation(api_client, auth_headers, tenant_a, tenan
 
 @pytest.mark.django_db
 def test_request_missing_tenant_id_claim_rejected(api_client, create_jwt):
-    # JWT issued without a tenant_id ('tid') claim
-    token_no_tid = create_jwt(tenant_id=None)
+    # Explicitly generate a JWT without the 'tid' claim
+    token_no_tid = create_jwt(include_tid=False)
     response = api_client.get(
         "/api/v1/vendors/",
         HTTP_AUTHORIZATION=f"Bearer {token_no_tid}"
