@@ -122,3 +122,29 @@ class Evidence(models.Model):
 
     def __str__(self):
         return f"Evidence: {self.title} ({self.vendor.name})"
+
+class OutboxStatus(models.TextChoices):
+    PENDING = "pending", "Pending Publication"
+    PUBLISHED = "published", "Published"
+    FAILED = "failed", "Failed"
+
+
+class OutboxEvent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant_id = models.UUIDField(db_index=True)
+    event_type = models.CharField(max_length=150)
+    routing_key = models.CharField(max_length=150)
+    payload = models.JSONField()
+    status = models.CharField(max_length=20, choices=OutboxStatus.choices, default=OutboxStatus.PENDING, db_index=True)
+    retry_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "outbox_events"
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="idx_outbox_pending"),
+        ]
+
+    def __str__(self):
+        return f"OutboxEvent({self.event_type}, status={self.status})"

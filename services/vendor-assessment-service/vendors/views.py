@@ -1,8 +1,10 @@
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+
 
 from vendors.models import Vendor, AssessmentTemplate, AssessmentSubmission, AssessmentSubmissionStatus
 from vendors.serializers import (
@@ -10,6 +12,7 @@ from vendors.serializers import (
     AssessmentTemplateSerializer,
     AssessmentSubmissionSerializer,
 )
+from vendors.outbox import create_outbox_event
 
 class TenantScopedQuerySetMixin:
     """Guarantees that every database operation is automatically filtered by the caller's tenant_id."""
@@ -64,7 +67,7 @@ class AssessmentSubmissionDetailView(TenantScopedQuerySetMixin, RetrieveUpdateDe
 
 
 class AssessmentSubmitActionView(APIView):
-    """Transitions a draft assessment into 'submitted' status and timestamps the action."""
+    """Transitions a draft assessment into 'submitted' status and writes an outbox event atomically."""
     def post(self, request, submission_id):
         try:
             submission = AssessmentSubmission.objects.get(id=submission_id, tenant_id=request.tenant_id)
@@ -77,10 +80,28 @@ class AssessmentSubmitActionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        submission.status = AssessmentSubmissionStatus.SUBMITTED
-        submission.submitted_by_id = request.user.id
-        submission.submitted_at = timezone.now()
-        submission.save(update_fields=["status", "submitted_by_id", "submitted_at", "updated_at"])
+        correlation_id = request.headers.get("X-Correlation-ID")
+
+        # Atomic Transaction: Database state and Outbox event succeed or fail together
+        with transaction.atomic():
+            submission.status = AssessmentSubmissionStatus.SUBMITTED
+            submission.submitted_by_id = request.user.id
+            submission.submitted_at = timezone.now()
+            submission.save(update_fields=["status", "submitted_by_id", "submitted_at", "updated_at"])
+
+            # Write event to Transactional Outbox
+            create_outbox_event(
+                tenant_id=request.tenant_id,
+                event_type="com.trustgrid.assessment.submitted.v1",
+                routing_key="vendor.assessment.submitted.v1",
+                data={
+                    "assessment_id": str(submission.id),
+                    "vendor_id": str(submission.vendor_id),
+                    "template_id": str(submission.template_id),
+                    "submitted_by": str(request.user.id),
+                },
+                correlation_id=correlation_id,
+            )
 
         serializer = AssessmentSubmissionSerializer(submission, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)

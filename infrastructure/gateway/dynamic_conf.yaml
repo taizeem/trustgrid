@@ -22,7 +22,7 @@ http:
     workflow-router:
       entryPoints:
         - web
-      rule: "PathPrefix(`/api/v1/workflows`)"
+      rule: "PathPrefix(`/api/v1/workflows`) || Path(`/health`)"
       service: workflow-service
       middlewares:
         - correlation-id
