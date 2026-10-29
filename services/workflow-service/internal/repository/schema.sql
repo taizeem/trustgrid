@@ -26,3 +26,11 @@ CREATE TABLE IF NOT EXISTS workflow_transitions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_transitions_workflow ON workflow_transitions (workflow_id, created_at);
+
+CREATE TABLE IF NOT EXISTS processed_events (
+    event_id UUID PRIMARY KEY,
+    event_type VARCHAR(150) NOT NULL,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_processed_events_date ON processed_events (processed_at);

@@ -13,6 +13,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/trustgrid/workflow-service/internal/auth"
+	"github.com/trustgrid/workflow-service/internal/consumer"
 	"github.com/trustgrid/workflow-service/internal/handler"
 	"github.com/trustgrid/workflow-service/internal/repository"
 )
@@ -33,6 +34,13 @@ func main() {
 	jwtSecret := getEnv("JWT_SECRET_KEY", "dev_insecure_jwt_secret_key_minimum_32_bytes_long_123")
 	serverPort := getEnv("SERVER_PORT", "8003")
 
+	amqpHost := getEnv("RABBITMQ_HOST", "rabbitmq")
+	amqpPort := getEnv("RABBITMQ_PORT", "5672")
+	amqpUser := getEnv("RABBITMQ_DEFAULT_USER", "trustgrid_mq")
+	amqpPass := getEnv("RABBITMQ_DEFAULT_PASS", "trustgrid_mq_pass_dev")
+	amqpVhost := getEnv("RABBITMQ_DEFAULT_VHOST", "trustgrid_vhost")
+	amqpURI := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", amqpUser, amqpPass, amqpHost, amqpPort, amqpVhost)
+
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPass, dbName)
 
@@ -42,16 +50,12 @@ func main() {
 	}
 	defer db.Close()
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
 	if err := db.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("Connected to PostgreSQL (trustgrid_workflow) successfully.")
 
-	// Auto-initialize tables
+	// Auto-execute schema updates
 	schemaSQL, err := os.ReadFile("internal/repository/schema.sql")
 	if err == nil {
 		if _, err := db.Exec(string(schemaSQL)); err != nil {
@@ -66,6 +70,20 @@ func main() {
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, h, tokenValidator)
+
+	// Start RabbitMQ Consumer
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cons, err := consumer.NewAssessmentConsumer(amqpURI, repo, db)
+	if err != nil {
+		log.Printf("Warning: Failed to connect consumer to RabbitMQ: %v (retrying in background)", err)
+	} else {
+		defer cons.Close()
+		if err := cons.Start(ctx); err != nil {
+			log.Printf("Error starting consumer: %v", err)
+		}
+	}
 
 	server := &http.Server{
 		Addr:         ":" + serverPort,
@@ -82,16 +100,15 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown on SIGTERM / SIGINT
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down Workflow Service...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 	log.Println("Workflow Service exited cleanly.")
