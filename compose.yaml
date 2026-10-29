@@ -112,6 +112,27 @@ services:
       retries: 5
     networks:
       - trustgrid_network
+  
+  workflow-service:
+    build:
+      context: ./services/workflow-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_workflow_svc
+    environment:
+      WORKFLOW_DB_HOST: postgres
+      WORKFLOW_DB_PORT: 5432
+      WORKFLOW_DB_NAME: ${WORKFLOW_DB_NAME:-trustgrid_workflow}
+      WORKFLOW_DB_USER: ${WORKFLOW_DB_USER:-workflow_user}
+      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:-workflow_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      SERVER_PORT: 8003
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trustgrid_network
 
 networks:
   trustgrid_network:

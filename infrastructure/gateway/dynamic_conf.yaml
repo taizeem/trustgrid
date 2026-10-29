@@ -1,6 +1,5 @@
 http:
   routers:
-    # Identity & Auth Router
     identity-router:
       entryPoints:
         - web
@@ -11,7 +10,6 @@ http:
         - rate-limit
         - cors-headers
 
-    # Vendor & Assessment Router
     vendor-router:
       entryPoints:
         - web
@@ -21,20 +19,26 @@ http:
         - correlation-id
         - cors-headers
 
+    workflow-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/workflows`)"
+      service: workflow-service
+      middlewares:
+        - correlation-id
+        - cors-headers
+
   middlewares:
-    # Injects correlation ID for distributed tracing
     correlation-id:
       headers:
         customRequestHeaders:
           X-Forwarded-Proto: "http"
 
-    # Rate limiting on authentication routes
     rate-limit:
       rateLimit:
         average: 50
         burst: 100
 
-    # Cross-Origin Resource Sharing
     cors-headers:
       headers:
         accessControlAllowMethods:
@@ -62,3 +66,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://vendor-assessment-service:8002"
+
+    workflow-service:
+      loadBalancer:
+        servers:
+          - url: "http://workflow-service:8003"
