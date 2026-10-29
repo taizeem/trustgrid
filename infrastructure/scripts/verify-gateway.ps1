@@ -2,7 +2,7 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host " TrustGrid API Gateway Verification" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
-$gatewayUrl = "http://localhost:8000"
+$gatewayUrl = "http://localhost:8088"
 
 # 1. Test Gateway Registration Routing to Identity Service
 Write-Host "`n[1/3] Testing Gateway Route: POST /api/v1/auth/register/..." -ForegroundColor Yellow
