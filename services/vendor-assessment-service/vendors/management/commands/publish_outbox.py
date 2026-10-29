@@ -59,7 +59,7 @@ class Command(BaseCommand):
                                 content_type="application/json",
                                 message_id=str(event.id),
                             ),
-                            mandatory=True,
+                            mandatory=False,
                         )
                         event.status = OutboxStatus.PUBLISHED
                         event.published_at = timezone.now()

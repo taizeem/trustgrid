@@ -67,6 +67,13 @@ REST_FRAMEWORK = {
 JWT_SECRET_KEY = env("JWT_SECRET_KEY")
 JWT_ALGORITHM = env("JWT_ALGORITHM")
 
+RABBITMQ_HOST = env("RABBITMQ_HOST", default="rabbitmq")
+RABBITMQ_PORT = env.int("RABBITMQ_PORT", default=5672)
+RABBITMQ_USER = env("RABBITMQ_USER", default="trustgrid_mq")
+RABBITMQ_PASS = env("RABBITMQ_PASS", default="trustgrid_mq_pass_dev")
+RABBITMQ_VHOST = env("RABBITMQ_VHOST", default="trustgrid_vhost")
+
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True

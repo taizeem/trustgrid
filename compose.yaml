@@ -49,11 +49,18 @@ services:
       VENDOR_DB_PASSWORD: ${VENDOR_DB_PASSWORD:-vendor_secure_pass_dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
     ports:
       - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     networks:
       - trustgrid_network
 
@@ -126,11 +133,18 @@ services:
       WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:-workflow_secure_pass_dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
       SERVER_PORT: 8003
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
     ports:
       - "8003:8003"
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     networks:
       - trustgrid_network
 
