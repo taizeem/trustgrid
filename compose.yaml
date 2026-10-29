@@ -147,6 +147,25 @@ services:
         condition: service_started
     networks:
       - trustgrid_network
+  document-service:
+    build:
+      context: ./services/document-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_document_svc
+    environment:
+      DATABASE_URL: postgres://doc_user:doc_secure_pass_dev@postgres:5432/trustgrid_document
+      STORAGE_DIR: /data/documents
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      PORT: 8004
+    ports:
+      - "8004:8004"
+    volumes:
+      - document_data:/data/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trustgrid_network
 
 networks:
   trustgrid_network:
@@ -157,3 +176,4 @@ volumes:
   postgres_data:
   rabbitmq_data:
   redis_data:
+  document_data:

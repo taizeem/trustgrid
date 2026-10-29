@@ -28,6 +28,15 @@ http:
         - correlation-id
         - cors-headers
 
+    document-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/documents`)"
+      service: document-service
+      middlewares:
+        - correlation-id
+        - cors-headers
+
   middlewares:
     correlation-id:
       headers:
@@ -71,3 +80,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://workflow-service:8003"
+
+    document-service:
+      loadBalancer:
+        servers:
+          - url: "http://document-service:8004"
