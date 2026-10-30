@@ -3,7 +3,7 @@ use super::models::RuleVersionMetadata;
 pub const CURRENT_RULE_VERSION: &str = "v1.0.0";
 
 pub fn get_available_rules() -> Vec<RuleVersionMetadata> {
-    vec![
+    return vec![
         RuleVersionMetadata {
             version: "v1.0.0".into(),
             name: "TrustGrid Standard Vendor Risk Model v1".into(),
@@ -12,9 +12,9 @@ pub fn get_available_rules() -> Vec<RuleVersionMetadata> {
             max_score: 100.0,
             min_score: 0.0,
         }
-    ]
+    ];
 }
 
 pub fn get_rule_metadata(version: &str) -> Option<RuleVersionMetadata> {
-    get_available_rules().into_iter().find(|r| r.version == version)
+    return get_available_rules().into_iter().find(|r| r.version == version);
 }

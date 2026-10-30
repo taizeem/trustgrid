@@ -18,7 +18,9 @@ pub struct Claims {
 
 #[derive(Debug, Clone)]
 pub struct AuthContext {
+    #[allow(dead_code)]
     pub user_id: Uuid,
+    #[allow(dead_code)]
     pub tenant_id: Uuid,
 }
 

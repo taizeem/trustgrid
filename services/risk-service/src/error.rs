@@ -16,6 +16,7 @@ pub enum ServiceError {
     #[error("Calculation error: {0}")]
     Calculation(#[from] RiskEngineError),
 
+    #[allow(dead_code)]
     #[error("Validation error: {0}")]
     Validation(String),
 
