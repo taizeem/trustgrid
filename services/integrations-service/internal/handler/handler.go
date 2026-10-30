@@ -30,6 +30,17 @@ func NewHandler(repo *repository.Repository, dispatcher *worker.Dispatcher, vali
 	}
 }
 
+func extractWebhookID(r *http.Request) (uuid.UUID, error) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) >= 5 {
+			idStr = parts[4]
+		}
+	}
+	return uuid.Parse(idStr)
+}
+
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -118,12 +129,7 @@ func (h *Handler) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 5 {
-		http.Error(w, `{"error":"Missing webhook ID"}`, http.StatusBadRequest)
-		return
-	}
-	webhookID, err := uuid.Parse(parts[4])
+	webhookID, err := extractWebhookID(r)
 	if err != nil {
 		http.Error(w, `{"error":"Invalid webhook ID format"}`, http.StatusBadRequest)
 		return
@@ -144,12 +150,7 @@ func (h *Handler) ListDeliveries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 5 {
-		http.Error(w, `{"error":"Missing webhook ID"}`, http.StatusBadRequest)
-		return
-	}
-	webhookID, err := uuid.Parse(parts[4])
+	webhookID, err := extractWebhookID(r)
 	if err != nil {
 		http.Error(w, `{"error":"Invalid webhook ID format"}`, http.StatusBadRequest)
 		return
@@ -172,12 +173,7 @@ func (h *Handler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 5 {
-		http.Error(w, `{"error":"Missing webhook ID"}`, http.StatusBadRequest)
-		return
-	}
-	webhookID, err := uuid.Parse(parts[4])
+	webhookID, err := extractWebhookID(r)
 	if err != nil {
 		http.Error(w, `{"error":"Invalid webhook ID format"}`, http.StatusBadRequest)
 		return
