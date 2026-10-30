@@ -22,3 +22,8 @@ GRANT ALL PRIVILEGES ON DATABASE trustgrid_document TO doc_user;
 CREATE USER risk_user WITH PASSWORD 'risk_secure_pass_dev' CREATEDB;
 CREATE DATABASE trustgrid_risk OWNER risk_user;
 GRANT ALL PRIVILEGES ON DATABASE trustgrid_risk TO risk_user;
+
+-- Integrations & Webhooks Service
+CREATE USER integration_user WITH PASSWORD 'integration_secure_pass_dev' CREATEDB;
+CREATE DATABASE trustgrid_integrations OWNER integration_user;
+GRANT ALL PRIVILEGES ON DATABASE trustgrid_integrations TO integration_user;

@@ -46,6 +46,15 @@ http:
         - correlation-id
         - cors-headers
 
+    integration-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/integrations`)"
+      service: integrations-service
+      middlewares:
+        - correlation-id
+        - cors-headers
+
   middlewares:
     correlation-id:
       headers:
@@ -99,3 +108,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://risk-service:8005"
+
+    integrations-service:
+      loadBalancer:
+        servers:
+          - url: "http://integrations-service:8006"

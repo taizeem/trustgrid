@@ -24,6 +24,8 @@ EOSQL
 create_service_db "$IDENTITY_DB_NAME" "$IDENTITY_DB_USER" "$IDENTITY_DB_PASSWORD"
 create_service_db "$VENDOR_DB_NAME" "$VENDOR_DB_USER" "$VENDOR_DB_PASSWORD"
 create_service_db "$WORKFLOW_DB_NAME" "$WORKFLOW_DB_USER" "$WORKFLOW_DB_PASSWORD"
+create_service_db "${DOC_DB_NAME:-trustgrid_document}" "${DOC_DB_USER:-doc_user}" "${DOC_DB_PASSWORD:-doc_secure_pass_dev}"
 create_service_db "$RISK_DB_NAME" "$RISK_DB_USER" "$RISK_DB_PASSWORD"
+create_service_db "${INTEGRATIONS_DB_NAME:-trustgrid_integrations}" "${INTEGRATIONS_DB_USER:-integration_user}" "${INTEGRATIONS_DB_PASSWORD:-integration_secure_pass_dev}"
 
 echo "All service databases initialized successfully."
