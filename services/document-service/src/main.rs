@@ -8,12 +8,18 @@ use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use document_service::{
-    config::AppConfig,
-    handlers::{download_document, get_document_metadata, upload_document, AppState},
-    storage::DiskStorage,
-    validator::MAX_FILE_SIZE,
-};
+mod auth;
+mod config;
+mod error;
+mod handlers;
+mod models;
+mod storage;
+mod validator;
+
+use config::AppConfig;
+use handlers::{download_document, get_document_metadata, upload_document, AppState};
+use storage::DiskStorage;
+use validator::MAX_FILE_SIZE;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
