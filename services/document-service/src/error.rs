@@ -26,6 +26,7 @@ pub enum ServiceError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
+    #[allow(dead_code)]
     #[error("Internal error: {0}")]
     Internal(String),
 }

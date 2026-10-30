@@ -35,9 +35,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     tracing::info!("Connected to PostgreSQL (trustgrid_document).");
 
-    // 2. Initialize tables
+    // 2. Initialize tables (split multiple statements)
     let schema_sql = include_str!("../migrations/0001_create_documents.sql");
-    sqlx::query(schema_sql).execute(&pool).await?;
+    for statement in schema_sql.split(';') {
+        let trimmed = statement.trim();
+        if !trimmed.is_empty() {
+            sqlx::query(trimmed).execute(&pool).await?;
+        }
+    }
     tracing::info!("Applied database schema for documents.");
 
     // 3. Storage Backend
