@@ -13,9 +13,13 @@ pub enum DataSensitivity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BusinessCriticality {
+    #[serde(alias = "TIER_4_LOW")]
     Tier4Low,
+    #[serde(alias = "TIER_3_MEDIUM")]
     Tier3Medium,
+    #[serde(alias = "TIER_2_HIGH")]
     Tier2High,
+    #[serde(alias = "TIER_1_CRITICAL")]
     Tier1Critical,
 }
 

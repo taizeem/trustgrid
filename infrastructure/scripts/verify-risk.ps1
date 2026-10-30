@@ -38,7 +38,7 @@ $vendorId = [guid]::NewGuid().ToString()
 $computePayload = @{
     vendor_id = $vendorId
     data_sensitivity = "CONFIDENTIAL"
-    business_criticality = "TIER_2_HIGH"
+    business_criticality = "TIER2_HIGH"
     security_controls = @{
         enforces_mfa = $true
         encrypts_at_rest = $true
@@ -83,7 +83,7 @@ Write-Host "`n[4/4] Verifying unsupported rule version rejection..." -Foreground
 $badPayload = @{
     vendor_id = $vendorId
     data_sensitivity = "PUBLIC"
-    business_criticality = "TIER_4_LOW"
+    business_criticality = "TIER4_LOW"
     security_controls = @{
         enforces_mfa = $true
         encrypts_at_rest = $true
