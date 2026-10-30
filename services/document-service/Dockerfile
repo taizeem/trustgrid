@@ -1,12 +1,13 @@
-FROM rust:alpine AS builder
+FROM rust:1.82-alpine AS builder
 
 WORKDIR /app
 
 RUN apk add --no-cache musl-dev
 
+# Cache dependencies
 COPY Cargo.toml Cargo.lock* ./
-# Create dummy main to cache dependency compilation
-RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release || true
+RUN mkdir src && echo "pub fn dummy() {}" > src/lib.rs && echo "fn main() {}" > src/main.rs && cargo build --release || true
+RUN rm -rf src target/release/deps/document_service* target/release/document-service*
 
 COPY . .
 RUN cargo build --release

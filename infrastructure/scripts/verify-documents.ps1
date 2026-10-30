@@ -30,13 +30,16 @@ $tenantToken = $exchangeResp.token
 $tempPdf = "$PWD\soc2_evidence.pdf"
 Set-Content -Path $tempPdf -Value "%PDF-1.4`nSOC 2 Type II Confidential Report for TrustGrid.`n%%EOF"
 
-# 3. Upload Document through Gateway
+# 3. Upload Document using native Windows curl.exe (compatible with PowerShell 5.1 & 7)
 Write-Host "`n[1/3] Uploading genuine PDF document through Gateway..." -ForegroundColor Yellow
-$form = @{
-    file = Get-Item -Path $tempPdf
+$uploadRaw = curl.exe -s -X POST "$gatewayUrl/api/v1/documents/upload" -H "Authorization: Bearer $tenantToken" -F "file=@$tempPdf"
+$uploadResp = $uploadRaw | ConvertFrom-Json
+
+if ($uploadResp.id) {
+    Write-Host "  [OK] Uploaded! ID: $($uploadResp.id), MIME: $($uploadResp.content_type), Hash: $($uploadResp.sha256_hash.Substring(0,16))..." -ForegroundColor Green
+} else {
+    Write-Host "  [FAIL] Upload failed: $uploadRaw" -ForegroundColor Red
 }
-$uploadResp = Invoke-RestMethod -Uri "$gatewayUrl/api/v1/documents/upload" -Method Post -Headers @{ Authorization = "Bearer $tenantToken" } -Form $form
-Write-Host "  [OK] Uploaded! ID: $($uploadResp.id), MIME: $($uploadResp.content_type), Hash: $($uploadResp.sha256_hash.Substring(0,16))..." -ForegroundColor Green
 
 # 4. Verify Metadata Retrieval
 Write-Host "`n[2/3] Fetching document metadata..." -ForegroundColor Yellow

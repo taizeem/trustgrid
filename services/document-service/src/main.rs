@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use axum::{
+    extract::{DefaultBodyLimit, Extension},
     routing::{get, post},
     Router,
 };
@@ -7,17 +8,12 @@ use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod auth;
-mod config;
-mod error;
-mod handlers;
-mod models;
-mod storage;
-mod validator;
-
-use config::AppConfig;
-use handlers::{download_document, get_document_metadata, upload_document, AppState};
-use storage::DiskStorage;
+use document_service::{
+    config::AppConfig,
+    handlers::{download_document, get_document_metadata, upload_document, AppState},
+    storage::DiskStorage,
+    validator::MAX_FILE_SIZE,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,12 +31,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     tracing::info!("Connected to PostgreSQL (trustgrid_document).");
 
-    // 2. Initialize tables (split multiple statements)
+    // 2. Initialize tables safely (split on semicolons to avoid extended query protocol errors)
     let schema_sql = include_str!("../migrations/0001_create_documents.sql");
     for statement in schema_sql.split(';') {
-        let trimmed = statement.trim();
-        if !trimmed.is_empty() {
-            sqlx::query(trimmed).execute(&pool).await?;
+        let stmt = statement.trim();
+        if !stmt.is_empty() {
+            sqlx::query(stmt).execute(&pool).await?;
         }
     }
     tracing::info!("Applied database schema for documents.");
@@ -55,8 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/documents/upload", post(upload_document))
         .route("/api/v1/documents/:id", get(get_document_metadata))
         .route("/api/v1/documents/:id/download", get(download_document))
+        .layer(DefaultBodyLimit::max(MAX_FILE_SIZE))
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .layer(Extension(state));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
     tracing::info!("Document Service listening on http://{}", addr);

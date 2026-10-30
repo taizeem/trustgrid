@@ -13,6 +13,11 @@ CREATE USER workflow_user WITH PASSWORD 'workflow_secure_pass_dev' CREATEDB;
 CREATE DATABASE trustgrid_workflow OWNER workflow_user;
 GRANT ALL PRIVILEGES ON DATABASE trustgrid_workflow TO workflow_user;
 
+-- Document Service
+CREATE USER doc_user WITH PASSWORD 'doc_secure_pass_dev' CREATEDB;
+CREATE DATABASE trustgrid_document OWNER doc_user;
+GRANT ALL PRIVILEGES ON DATABASE trustgrid_document TO doc_user;
+
 -- Risk Service
 CREATE USER risk_user WITH PASSWORD 'risk_secure_pass_dev' CREATEDB;
 CREATE DATABASE trustgrid_risk OWNER risk_user;

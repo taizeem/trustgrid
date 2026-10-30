@@ -3,14 +3,15 @@ services:
     image: traefik:v3.1
     container_name: trustgrid_gateway
     ports:
-      - "8088:8000"   # Public HTTP API Entrypoint
-      - "8080:8080"   # Traefik Web Dashboard
+      - "8088:8000"
+      - "8080:8080"
     volumes:
       - ./infrastructure/gateway/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - ./infrastructure/gateway/dynamic_conf.yaml:/etc/traefik/dynamic_conf.yaml:ro
     depends_on:
       - identity-service
       - vendor-assessment-service
+      - workflow-service
     networks:
       - trustgrid_network
 
@@ -61,6 +62,54 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_started
+    networks:
+      - trustgrid_network
+
+  workflow-service:
+    build:
+      context: ./services/workflow-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_workflow_svc
+    environment:
+      WORKFLOW_DB_HOST: postgres
+      WORKFLOW_DB_PORT: 5432
+      WORKFLOW_DB_NAME: ${WORKFLOW_DB_NAME:-trustgrid_workflow}
+      WORKFLOW_DB_USER: ${WORKFLOW_DB_USER:-workflow_user}
+      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:-workflow_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      SERVER_PORT: 8003
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - trustgrid_network
+
+  document-service:
+    build:
+      context: ./services/document-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_document_svc
+    environment:
+      DATABASE_URL: postgres://doc_user:doc_secure_pass_dev@postgres:5432/trustgrid_document
+      STORAGE_DIR: /data/documents
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      PORT: 8004
+    ports:
+      - "8004:8004"
+    volumes:
+      - document_data:/data/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - trustgrid_network
 
@@ -117,53 +166,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    networks:
-      - trustgrid_network
-  
-  workflow-service:
-    build:
-      context: ./services/workflow-service
-      dockerfile: Dockerfile
-    container_name: trustgrid_workflow_svc
-    environment:
-      WORKFLOW_DB_HOST: postgres
-      WORKFLOW_DB_PORT: 5432
-      WORKFLOW_DB_NAME: ${WORKFLOW_DB_NAME:-trustgrid_workflow}
-      WORKFLOW_DB_USER: ${WORKFLOW_DB_USER:-workflow_user}
-      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:-workflow_secure_pass_dev}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
-      SERVER_PORT: 8003
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
-    ports:
-      - "8003:8003"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
-    networks:
-      - trustgrid_network
-  document-service:
-    build:
-      context: ./services/document-service
-      dockerfile: Dockerfile
-    container_name: trustgrid_document_svc
-    environment:
-      DATABASE_URL: postgres://doc_user:doc_secure_pass_dev@postgres:5432/trustgrid_document
-      STORAGE_DIR: /data/documents
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
-      PORT: 8004
-    ports:
-      - "8004:8004"
-    volumes:
-      - document_data:/data/documents
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - trustgrid_network
 

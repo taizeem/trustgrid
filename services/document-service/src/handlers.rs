@@ -1,7 +1,6 @@
 use axum::{
-    extract::{Multipart, Path, State},
+    extract::{Extension, Multipart, Path},
     http::{header, HeaderMap, StatusCode},
-    response::IntoResponse,
     Json,
 };
 use sha2::{Digest, Sha256};
@@ -9,7 +8,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    auth::extract_auth,
+    auth::AuthContext,
     error::ServiceError,
     models::{DocumentMetadata, DocumentUploadResponse},
     storage::DiskStorage,
@@ -23,11 +22,10 @@ pub struct AppState {
 }
 
 pub async fn upload_document(
-    State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(state): Extension<AppState>,
+    auth: AuthContext,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<DocumentUploadResponse>), ServiceError> {
-    let auth = extract_auth(&headers)?;
     let mut file_bytes = Vec::new();
     let mut file_name = "unnamed".to_string();
 
@@ -38,7 +36,11 @@ pub async fn upload_document(
     {
         if field.name() == Some("file") {
             if let Some(name) = field.file_name() {
-                file_name = name.to_string();
+                // Strip directory traversal or path components
+                file_name = std::path::Path::new(name)
+                    .file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "unnamed".to_string());
             }
 
             let bytes = field
@@ -58,15 +60,19 @@ pub async fn upload_document(
         return Err(ServiceError::Validation("No file field provided in form-data".into()));
     }
 
+    // 1. Binary Magic-Byte Sniffing
     let detected_mime = FileValidator::sniff_mime_type(&file_bytes)?;
 
+    // 2. Cryptographic SHA-256 Digest
     let mut hasher = Sha256::new();
     hasher.update(&file_bytes);
     let sha256_hash = hex::encode(hasher.finalize());
 
+    // 3. Save raw bytes to storage
     let doc_id = Uuid::new_v4();
     let storage_path = state.storage.save_document(auth.tenant_id, doc_id, &file_bytes).await?;
 
+    // 4. Record metadata in PostgreSQL
     let size_bytes = file_bytes.len() as i64;
     let query = r#"
         INSERT INTO documents (id, tenant_id, file_name, content_type, file_size_bytes, sha256_hash, storage_path, uploaded_by, status, created_at)
@@ -98,11 +104,10 @@ pub async fn upload_document(
 }
 
 pub async fn get_document_metadata(
-    State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(state): Extension<AppState>,
+    auth: AuthContext,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DocumentMetadata>, ServiceError> {
-    let auth = extract_auth(&headers)?;
     let query = r#"
         SELECT id, tenant_id, file_name, content_type, file_size_bytes, sha256_hash, storage_path, uploaded_by, status, created_at
         FROM documents
@@ -120,13 +125,12 @@ pub async fn get_document_metadata(
 }
 
 pub async fn download_document(
-    State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(state): Extension<AppState>,
+    auth: AuthContext,
     Path(id): Path<Uuid>,
-) -> Result<impl IntoResponse, ServiceError> {
-    let auth = extract_auth(&headers)?;
+) -> Result<(HeaderMap, Vec<u8>), ServiceError> {
     let query = "SELECT storage_path, content_type, file_name FROM documents WHERE id = $1 AND tenant_id = $2";
-    let row: (String, String, String) = sqlx::query_as::<_, (String, String, String)>(query)
+    let row: (String, String, String) = sqlx::query_as(query)
         .bind(id)
         .bind(auth.tenant_id)
         .fetch_optional(&state.db)
@@ -135,12 +139,17 @@ pub async fn download_document(
 
     let bytes = state.storage.read_document(&row.0).await?;
 
-    let mut headers_map = HeaderMap::new();
-    headers_map.insert(header::CONTENT_TYPE, row.1.parse().unwrap());
-    headers_map.insert(
-        header::CONTENT_DISPOSITION,
-        format!("attachment; filename=\"{}\"", row.2).parse().unwrap(),
-    );
+    let mut headers = HeaderMap::new();
+    if let Ok(mime) = row.1.parse() {
+        headers.insert(header::CONTENT_TYPE, mime);
+    }
+    let safe_filename = std::path::Path::new(&row.2)
+        .file_name()
+        .map(|f| f.to_string_lossy().to_string())
+        .unwrap_or_else(|| "document".to_string());
+    if let Ok(disp) = format!("attachment; filename=\"{}\"", safe_filename).parse() {
+        headers.insert(header::CONTENT_DISPOSITION, disp);
+    }
 
-    Ok((headers_map, bytes))
+    Ok((headers, bytes))
 }
