@@ -13,6 +13,7 @@ services:
       - vendor-assessment-service
       - workflow-service
       - document-service
+      - risk-service
     networks:
       - trustgrid_network
 
@@ -167,6 +168,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - trustgrid_network
+
+  risk-service:
+    build:
+      context: ./services/risk-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_risk_svc
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      PORT: 8005
+    ports:
+      - "8005:8005"
     networks:
       - trustgrid_network
 

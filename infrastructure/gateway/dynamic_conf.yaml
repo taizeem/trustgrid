@@ -37,6 +37,15 @@ http:
         - correlation-id
         - cors-headers
 
+    risk-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/risk`)"
+      service: risk-service
+      middlewares:
+        - correlation-id
+        - cors-headers
+
   middlewares:
     correlation-id:
       headers:
@@ -85,3 +94,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://document-service:8004"
+
+    risk-service:
+      loadBalancer:
+        servers:
+          - url: "http://risk-service:8005"
