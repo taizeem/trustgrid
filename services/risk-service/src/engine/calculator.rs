@@ -33,7 +33,7 @@ impl RiskCalculator {
         }
 
         let mut breakdown = Vec::new();
-        let mut raw_score = 0.0;
+        let mut raw_score: f64 = 0.0;
 
         // 1. Data Sensitivity Factor (Max: 30 pts)
         let (ds_pts, ds_rationale) = match input.data_sensitivity {
@@ -153,7 +153,7 @@ impl RiskCalculator {
         }
 
         // 6. Normalization & Clamping to [0.00, 100.00]
-        let clamped = raw_score.clamp(0.0, 100.0);
+        let clamped: f64 = raw_score.clamp(0.0, 100.0);
         let final_score = (clamped * 100.0).round() / 100.0;
 
         let risk_tier = match final_score {
