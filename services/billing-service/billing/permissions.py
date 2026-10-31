@@ -16,6 +16,10 @@ class HasRole(BasePermission):
         if allowed_roles:
             self.allowed_roles = allowed_roles
 
+    def __call__(self):
+        """Allows both HasRole(['admin']) instances and HasRole classes in permission_classes."""
+        return self
+
     def has_permission(self, request, view):
         if not request.user or not getattr(request.user, "is_authenticated", False):
             return False

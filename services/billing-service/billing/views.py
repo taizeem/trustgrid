@@ -25,7 +25,8 @@ class PlanListView(APIView):
 
     def get(self, request):
         plans = Plan.objects.filter(is_active=True).prefetch_related("entitlements")
-        return Response(PlanSerializer(plans, many=True).data)
+        serializer = PlanSerializer(plans, many=True)
+        return Response(serializer.data)
 
 
 class SubscriptionDetailView(APIView):
@@ -33,7 +34,8 @@ class SubscriptionDetailView(APIView):
 
     def get(self, request):
         sub = EntitlementService.get_or_create_default_subscription(request.tenant_id)
-        return Response(SubscriptionSerializer(sub).data)
+        serializer = SubscriptionSerializer(sub)
+        return Response(serializer.data)
 
 
 class PlanChangeView(APIView):
