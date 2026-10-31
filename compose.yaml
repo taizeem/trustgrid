@@ -198,7 +198,7 @@ services:
       INTEGRATIONS_DB_USER: ${INTEGRATIONS_DB_USER:-integration_user}
       INTEGRATIONS_DB_PASSWORD: ${INTEGRATIONS_DB_PASSWORD:-integration_secure_pass_dev}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
-      ALLOW_INTERNAL_WEBHOOKS: ${ALLOW_INTERNAL_WEBHOOKS:-true}
+      ALLOW_INTERNAL_WEBHOOKS: ${ALLOW_INTERNAL_WEBHOOKS:-false}
     ports:
       - "8006:8006"
     depends_on:
