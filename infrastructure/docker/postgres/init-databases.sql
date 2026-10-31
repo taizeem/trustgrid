@@ -27,3 +27,8 @@ GRANT ALL PRIVILEGES ON DATABASE trustgrid_risk TO risk_user;
 CREATE USER integration_user WITH PASSWORD 'integration_secure_pass_dev' CREATEDB;
 CREATE DATABASE trustgrid_integrations OWNER integration_user;
 GRANT ALL PRIVILEGES ON DATABASE trustgrid_integrations TO integration_user;
+
+-- Billing & Usage Metering Service
+CREATE USER billing_user WITH PASSWORD 'billing_secure_pass_dev' CREATEDB;
+CREATE DATABASE trustgrid_billing OWNER billing_user;
+GRANT ALL PRIVILEGES ON DATABASE trustgrid_billing TO billing_user;

@@ -206,6 +206,29 @@ services:
         condition: service_healthy
     networks:
       - trustgrid_network
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_billing_svc
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      BILLING_DB_NAME: ${BILLING_DB_NAME:-trustgrid_billing}
+      BILLING_DB_USER: ${BILLING_DB_USER:-billing_user}
+      BILLING_DB_PASSWORD: ${BILLING_DB_PASSWORD:-billing_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_mock_sandbox_key_123}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_mock_sandbox_secret_456}
+      PAYMENT_SANDBOX_MODE: ${PAYMENT_SANDBOX_MODE:-true}
+    ports:
+      - "8007:8007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trustgrid_network
 
 networks:
   trustgrid_network:

@@ -54,6 +54,14 @@ http:
       middlewares:
         - correlation-id
         - cors-headers
+    billing-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/billing`)"
+      service: billing-service
+      middlewares:
+        - correlation-id
+        - cors-headers
 
   middlewares:
     correlation-id:
@@ -113,3 +121,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://integrations-service:8006"
+    
+    billing-service:
+      loadBalancer:
+        servers:
+          - url: "http://billing-service:8007"
