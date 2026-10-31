@@ -46,6 +46,7 @@ def auth_headers(create_jwt):
 
 @pytest.fixture
 def seed_plans(db):
+    """Provisions standard tiered plans with entitlements."""
     free_plan = Plan.objects.create(
         code="free",
         name="Free Tier",
