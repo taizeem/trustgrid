@@ -14,8 +14,9 @@ WORKDIR /app
 
 RUN groupadd -r trustgrid && useradd -r -g trustgrid -d /app -s /sbin/nologin trustgrid
 
-COPY --from=builder /app/.venv /app/.venv
-COPY . /app
+# Ensure the unprivileged user owns the virtualenv and application directory
+COPY --chown=trustgrid:trustgrid --from=builder /app/.venv /app/.venv
+COPY --chown=trustgrid:trustgrid . /app
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
