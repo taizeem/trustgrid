@@ -15,56 +15,7 @@ services:
       - document-service
       - risk-service
       - integrations-service
-    networks:
-      - trustgrid_network
-
-  identity-service:
-    build:
-      context: ./services/identity-service
-      dockerfile: Dockerfile
-    container_name: trustgrid_identity_svc
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      IDENTITY_DB_NAME: ${IDENTITY_DB_NAME:-trustgrid_identity}
-      IDENTITY_DB_USER: ${IDENTITY_DB_USER:-identity_user}
-      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity_secure_pass_dev}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
-    ports:
-      - "8001:8001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - trustgrid_network
-
-  vendor-assessment-service:
-    build:
-      context: ./services/vendor-assessment-service
-      dockerfile: Dockerfile
-    container_name: trustgrid_vendor_svc
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      VENDOR_DB_NAME: ${VENDOR_DB_NAME:-trustgrid_vendor}
-      VENDOR_DB_USER: ${VENDOR_DB_USER:-vendor_user}
-      VENDOR_DB_PASSWORD: ${VENDOR_DB_PASSWORD:-vendor_secure_pass_dev}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
-      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
-      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
-    ports:
-      - "8002:8002"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
+      - billing-service
     networks:
       - trustgrid_network
 
@@ -123,7 +74,57 @@ services:
       retries: 5
     networks:
       - trustgrid_network
-  
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_identity_svc
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      IDENTITY_DB_NAME: ${IDENTITY_DB_NAME:-trustgrid_identity}
+      IDENTITY_DB_USER: ${IDENTITY_DB_USER:-identity_user}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trustgrid_network
+
+  vendor-assessment-service:
+    build:
+      context: ./services/vendor-assessment-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_vendor_svc
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      VENDOR_DB_NAME: ${VENDOR_DB_NAME:-trustgrid_vendor}
+      VENDOR_DB_USER: ${VENDOR_DB_USER:-vendor_user}
+      VENDOR_DB_PASSWORD: ${VENDOR_DB_PASSWORD:-vendor_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - trustgrid_network
+
   workflow-service:
     build:
       context: ./services/workflow-service
@@ -206,6 +207,7 @@ services:
         condition: service_healthy
     networks:
       - trustgrid_network
+
   billing-service:
     build:
       context: ./services/billing-service

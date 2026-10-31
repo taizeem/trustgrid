@@ -54,6 +54,7 @@ http:
       middlewares:
         - correlation-id
         - cors-headers
+
     billing-router:
       entryPoints:
         - web
@@ -121,7 +122,7 @@ http:
       loadBalancer:
         servers:
           - url: "http://integrations-service:8006"
-    
+
     billing-service:
       loadBalancer:
         servers:
