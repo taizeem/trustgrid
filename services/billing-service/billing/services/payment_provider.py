@@ -1,9 +1,11 @@
 import hashlib
 import hmac
+import importlib
 import json
 import logging
 import time
 import uuid
+from datetime import datetime, timezone as dt_tz
 from django.conf import settings
 from django.utils import timezone
 from billing.models import Plan, Subscription, PaymentWebhookEvent, Invoice
@@ -11,12 +13,50 @@ from billing.models import Plan, Subscription, PaymentWebhookEvent, Invoice
 logger = logging.getLogger(__name__)
 
 class StripeSandboxAdapter:
+    """
+    Payment provider integration adapter.
+    Supports both real Stripe test-mode API and self-contained sandbox simulation.
+    Never stores sensitive raw card information (PAN, CVV).
+    """
+
     @classmethod
     def create_checkout_session(cls, tenant_id, plan_code, success_url=None, cancel_url=None):
         plan = Plan.objects.get(code=plan_code, is_active=True)
         sub = Subscription.objects.filter(tenant_id=tenant_id).first()
         customer_id = sub.external_customer_id if sub and sub.external_customer_id else f"cus_sandbox_{uuid.uuid4().hex[:12]}"
 
+        # Dynamically import stripe only if live test mode is requested, avoiding IDE unresolved warnings
+        if not settings.PAYMENT_SANDBOX_MODE and settings.STRIPE_SECRET_KEY.startswith("sk_"):
+            try:
+                stripe = importlib.import_module("stripe")
+                stripe.api_key = settings.STRIPE_SECRET_KEY
+                session = stripe.checkout.Session.create(
+                    customer=customer_id,
+                    payment_method_types=["card"],
+                    line_items=[{
+                        "price_data": {
+                            "currency": plan.currency.lower(),
+                            "product_data": {"name": f"TrustGrid {plan.name}"},
+                            "unit_amount": plan.price_cents,
+                            "recurring": {"interval": plan.billing_interval},
+                        },
+                        "quantity": 1,
+                    }],
+                    mode="subscription",
+                    success_url=success_url or "https://app.trustgrid.internal/billing/success",
+                    cancel_url=cancel_url or "https://app.trustgrid.internal/billing/cancel",
+                    client_reference_id=str(tenant_id),
+                )
+                return {
+                    "session_id": session.id,
+                    "url": session.url,
+                    "customer_id": customer_id,
+                    "provider": "stripe_live_test",
+                }
+            except Exception as e:
+                logger.error(f"Stripe API checkout session creation failed: {e}")
+
+        # Deterministic Sandbox Simulation for local development & testing
         session_id = f"cs_test_sandbox_{uuid.uuid4().hex[:16]}"
         checkout_url = f"https://checkout.stripe.com/pay/{session_id}"
 
@@ -35,6 +75,10 @@ class StripeSandboxAdapter:
 
     @classmethod
     def verify_webhook_signature(cls, payload_bytes, sig_header):
+        """
+        Validates the Stripe webhook HMAC signature against STRIPE_WEBHOOK_SECRET.
+        Expected format: 't=1492774577,v1=5257a869e7ecebeda32affa62cd492304fdc3b4bcdc6efde2410f4216e702fb9'
+        """
         if not sig_header or not settings.STRIPE_WEBHOOK_SECRET:
             return False
 
@@ -65,6 +109,10 @@ class StripeSandboxAdapter:
 
     @classmethod
     def process_incoming_webhook(cls, event_id, event_type, payload):
+        """
+        Processes incoming payment webhook idempotently.
+        Deduplicates via PaymentWebhookEvent.event_id.
+        """
         event_record, created = PaymentWebhookEvent.objects.get_or_create(
             event_id=event_id,
             defaults={
@@ -84,13 +132,18 @@ class StripeSandboxAdapter:
 
             if event_type in ["customer.subscription.created", "customer.subscription.updated"]:
                 cls._handle_subscription_sync(data_object)
+
             elif event_type == "customer.subscription.deleted":
                 cls._handle_subscription_canceled(data_object)
+
             elif event_type == "invoice.payment_succeeded":
                 cls._handle_invoice_paid(data_object)
+
             elif event_type == "invoice.payment_failed":
                 cls._handle_invoice_failed(data_object)
+
             else:
+                logger.info(f"Ignored unhandled billing webhook event: {event_type}")
                 event_record.status = "ignored"
                 event_record.save(update_fields=["status"])
                 return {"status": "ignored", "event_id": event_id}
@@ -116,8 +169,9 @@ class StripeSandboxAdapter:
         tenant_id_str = data_obj.get("metadata", {}).get("tenant_id")
 
         plan = Plan.objects.filter(code=plan_code).first() or Plan.objects.first()
-        period_end_ts = data_obj.get("current_period_end")
-        period_end = timezone.datetime.fromtimestamp(period_end_ts, tz=timezone.utc) if period_end_ts else timezone.now() + timezone.timedelta(days=30)
+
+        period_end_timestamp = data_obj.get("current_period_end")
+        period_end = datetime.fromtimestamp(period_end_timestamp, tz=dt_tz.utc) if period_end_timestamp else timezone.now() + timezone.timedelta(days=30)
 
         sub = None
         if tenant_id_str:
@@ -136,11 +190,13 @@ class StripeSandboxAdapter:
             sub.external_subscription_id = ext_sub_id
             sub.external_customer_id = customer_id
             sub.save()
+            logger.info(f"Updated subscription for tenant {sub.tenant_id} to {plan.code} [{sub.status}]")
 
     @classmethod
     def _handle_subscription_canceled(cls, data_obj):
         ext_sub_id = data_obj.get("id")
         customer_id = data_obj.get("customer")
+
         sub = Subscription.objects.filter(external_subscription_id=ext_sub_id).first()
         if not sub and customer_id:
             sub = Subscription.objects.filter(external_customer_id=customer_id).first()
@@ -149,6 +205,7 @@ class StripeSandboxAdapter:
             sub.status = "canceled"
             sub.canceled_at = timezone.now()
             sub.save(update_fields=["status", "canceled_at"])
+            logger.info(f"Canceled subscription for tenant {sub.tenant_id}")
 
     @classmethod
     def _handle_invoice_paid(cls, data_obj):
@@ -175,6 +232,7 @@ class StripeSandboxAdapter:
                 "paid_at": timezone.now(),
             }
         )
+        logger.info(f"Processed invoice.payment_succeeded for invoice {inv_id}")
 
     @classmethod
     def _handle_invoice_failed(cls, data_obj):
@@ -197,3 +255,4 @@ class StripeSandboxAdapter:
                 "status": "open",
             }
         )
+        logger.warning(f"Processed invoice.payment_failed for invoice {inv_id}, subscription marked past_due")

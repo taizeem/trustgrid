@@ -8,20 +8,16 @@ class IsTenantAuthenticated(BasePermission):
         return bool(getattr(request, "tenant_id", None))
 
 
-class HasRole(BasePermission):
-    """Factory permission requiring specific tenant roles like 'admin' or 'billing_manager'."""
-    allowed_roles = []
+def HasRole(allowed_roles):
+    """
+    Factory returning a BasePermission class requiring specific tenant roles like 'admin'.
+    Compatible with Django REST Framework's permission_classes = [IsTenantAuthenticated, HasRole(['admin'])].
+    """
+    class RolePermission(BasePermission):
+        def has_permission(self, request, view):
+            if not request.user or not getattr(request.user, "is_authenticated", False):
+                return False
+            user_roles = getattr(request.user, "roles", [])
+            return any(role in user_roles for role in allowed_roles)
 
-    def __init__(self, allowed_roles=None):
-        if allowed_roles:
-            self.allowed_roles = allowed_roles
-
-    def __call__(self):
-        """Allows both HasRole(['admin']) instances and HasRole classes in permission_classes."""
-        return self
-
-    def has_permission(self, request, view):
-        if not request.user or not getattr(request.user, "is_authenticated", False):
-            return False
-        user_roles = getattr(request.user, "roles", [])
-        return any(role in user_roles for role in self.allowed_roles)
+    return RolePermission

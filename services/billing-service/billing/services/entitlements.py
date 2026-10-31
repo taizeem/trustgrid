@@ -15,6 +15,7 @@ class EntitlementService:
 
         free_plan = Plan.objects.filter(code="free", is_active=True).first()
         if not free_plan:
+            # Create default free plan if DB not seeded yet
             free_plan = Plan.objects.create(
                 code="free",
                 name="Free Tier",
@@ -23,9 +24,23 @@ class EntitlementService:
                 billing_interval="month",
                 trial_days=14,
             )
-            PlanEntitlement.objects.create(plan=free_plan, feature_key="max_vendors", feature_type="quota", quota_limit=5)
-            PlanEntitlement.objects.create(plan=free_plan, feature_key="assessments_per_month", feature_type="quota", quota_limit=10)
-            PlanEntitlement.objects.create(plan=free_plan, feature_key="api_access", feature_type="boolean")
+            PlanEntitlement.objects.create(
+                plan=free_plan,
+                feature_key="max_vendors",
+                feature_type="quota",
+                quota_limit=5
+            )
+            PlanEntitlement.objects.create(
+                plan=free_plan,
+                feature_key="assessments_per_month",
+                feature_type="quota",
+                quota_limit=10
+            )
+            PlanEntitlement.objects.create(
+                plan=free_plan,
+                feature_key="api_access",
+                feature_type="boolean"
+            )
 
         now = timezone.now()
         end_time = now + timezone.timedelta(days=free_plan.trial_days or 14)
@@ -33,7 +48,7 @@ class EntitlementService:
             tenant_id=tenant_id,
             plan=free_plan,
             status="trialing",
-            current_period_start=now,
+            current_period_start=now - timezone.timedelta(hours=1),
             current_period_end=end_time,
         )
         logger.info(f"Initialized default subscription for tenant {tenant_id} on plan {free_plan.code}")
@@ -41,6 +56,10 @@ class EntitlementService:
 
     @classmethod
     def check_feature_access(cls, tenant_id, feature_key, requested_increment=1):
+        """
+        Evaluates whether a tenant is entitled to perform an operation.
+        Returns a dict containing authorization decision, current usage, and limits.
+        """
         subscription = cls.get_or_create_default_subscription(tenant_id)
 
         if not subscription.is_currently_valid():
@@ -72,8 +91,10 @@ class EntitlementService:
                 "plan_code": subscription.plan.code,
             }
 
+        # Numeric Quota Calculation within current billing period
         quota_limit = entitlement.quota_limit
         if quota_limit is None:
+            # Unlimited
             return {
                 "allowed": True,
                 "feature_key": feature_key,
@@ -87,7 +108,7 @@ class EntitlementService:
         usage_total = UsageRecord.objects.filter(
             tenant_id=tenant_id,
             metric_name=feature_key,
-            timestamp__gte=subscription.current_period_start,
+            timestamp__gte=subscription.current_period_start - timezone.timedelta(minutes=5),
             timestamp__lte=subscription.current_period_end,
         ).aggregate(total=Sum("quantity"))["total"] or 0
 

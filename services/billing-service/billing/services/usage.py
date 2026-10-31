@@ -10,8 +10,15 @@ logger = logging.getLogger(__name__)
 class UsageMeteringService:
     @staticmethod
     def record_usage(tenant_id, metric_name, quantity=1, idempotency_key=None, recorded_by=None):
+        """
+        Records metric consumption for a tenant idempotently.
+        If idempotency_key has already been processed, returns the existing record without incrementing.
+        """
         if not idempotency_key:
             raise ValueError("idempotency_key is required for usage metering.")
+
+        # Ensure default subscription is provisioned before usage record is stamped
+        EntitlementService.get_or_create_default_subscription(tenant_id)
 
         try:
             with transaction.atomic():
@@ -29,11 +36,15 @@ class UsageMeteringService:
                     logger.info(f"Duplicate usage event ignored via idempotency key: {idempotency_key}")
                 return record, created
         except IntegrityError:
+            # Race condition catch: existing key was committed concurrently
             record = UsageRecord.objects.get(idempotency_key=idempotency_key)
             return record, False
 
     @staticmethod
     def get_tenant_usage_summary(tenant_id):
+        """
+        Calculates all usage metrics for the active billing cycle alongside quota limits.
+        """
         subscription = EntitlementService.get_or_create_default_subscription(tenant_id)
         entitlements = PlanEntitlement.objects.filter(plan=subscription.plan)
 
@@ -52,7 +63,7 @@ class UsageMeteringService:
                 usage_sum = UsageRecord.objects.filter(
                     tenant_id=tenant_id,
                     metric_name=ent.feature_key,
-                    timestamp__gte=subscription.current_period_start,
+                    timestamp__gte=subscription.current_period_start - timezone.timedelta(minutes=5),
                     timestamp__lte=subscription.current_period_end,
                 ).aggregate(total=Sum("quantity"))["total"] or 0
 
