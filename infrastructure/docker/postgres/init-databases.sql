@@ -32,3 +32,8 @@ GRANT ALL PRIVILEGES ON DATABASE trustgrid_integrations TO integration_user;
 CREATE USER billing_user WITH PASSWORD 'billing_secure_pass_dev' CREATEDB;
 CREATE DATABASE trustgrid_billing OWNER billing_user;
 GRANT ALL PRIVILEGES ON DATABASE trustgrid_billing TO billing_user;
+
+-- Audit & Compliance Reporting Service
+CREATE USER audit_user WITH PASSWORD 'audit_secure_pass_dev' CREATEDB;
+CREATE DATABASE trustgrid_audit OWNER audit_user;
+GRANT ALL PRIVILEGES ON DATABASE trustgrid_audit TO audit_user;

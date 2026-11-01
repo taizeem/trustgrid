@@ -63,6 +63,15 @@ http:
       middlewares:
         - correlation-id
         - cors-headers
+    
+    audit-router:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api/v1/audit`) || PathPrefix(`/api/v1/reports`)"
+      service: audit-service
+      middlewares:
+        - correlation-id
+        - cors-headers
 
   middlewares:
     correlation-id:
@@ -127,3 +136,7 @@ http:
       loadBalancer:
         servers:
           - url: "http://billing-service:8007"
+    audit-service:
+      loadBalancer:
+        servers:
+          - url: "http://audit-reporting-service:8008"

@@ -231,6 +231,34 @@ services:
         condition: service_healthy
     networks:
       - trustgrid_network
+  
+  audit-reporting-service:
+    build:
+      context: ./services/audit-reporting-service
+      dockerfile: Dockerfile
+    container_name: trustgrid_audit_svc
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      AUDIT_DB_NAME: ${AUDIT_DB_NAME:-trustgrid_audit}
+      AUDIT_DB_USER: ${AUDIT_DB_USER:-audit_user}
+      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD:-audit_secure_pass_dev}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_insecure_jwt_secret_key_minimum_32_bytes_long_123}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-trustgrid_mq}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-trustgrid_mq_pass_dev}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-trustgrid_vhost}
+    ports:
+      - "8008:8008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - trustgrid_network
 
 networks:
   trustgrid_network:
