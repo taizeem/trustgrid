@@ -51,8 +51,11 @@ class AuditEvent(models.Model):
         return hashlib.sha256(data_str.encode("utf-8")).hexdigest()
 
     def save(self, *args, **kwargs):
-        if self.pk and AuditEvent.objects.filter(pk=self.pk).exists():
-            raise PermissionDenied("Audit events are immutable and cannot be updated.")
+        if not self.ip_address:
+            self.ip_address = None
+        if self.pk and not getattr(self._state, "adding", True):
+            if AuditEvent.objects.filter(pk=self.pk).exists():
+                raise PermissionDenied("Audit events are immutable and cannot be updated.")
         if not self.checksum:
             self.checksum = self._compute_checksum()
         super().save(*args, **kwargs)

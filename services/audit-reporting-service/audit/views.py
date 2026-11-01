@@ -134,6 +134,11 @@ class ExportAuditLogsView(APIView):
     Exports tenant audit events as CSV or JSON format for compliance and audit evidence.
     """
     permission_classes = [IsTenantAuthenticated, CanViewAuditLogs]
+    def perform_content_negotiation(self, request, force=False):
+        # Bypass DRF's built-in format-suffix negotiation so ?format=csv or ?format=json
+        # is handled directly by this view instead of raising 404 NotFound
+        renderers = self.get_renderers()
+        return (renderers[0], renderers[0].media_type)
 
     def get(self, request):
         tenant_id = request.tenant_id
@@ -144,7 +149,6 @@ class ExportAuditLogsView(APIView):
             serializer = AuditEventSerializer(events, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Default to CSV export
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="trustgrid_audit_export_{tenant_id}.csv"'
 
