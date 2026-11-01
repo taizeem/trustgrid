@@ -107,7 +107,7 @@ Write-Host "  [OK] Vendor Lifecycle Events: $($riskSummaryResp.total_vendor_life
 
 # 8. Compliance Audit CSV Export
 Write-Host "`n[8/10] Testing Streaming CSV Audit Export..." -ForegroundColor Yellow
-$csvResp = Invoke-WebRequest -Uri "$gatewayUrl/api/v1/reports/audit-export/?format=csv" -Method Get -Headers $headersA
+$csvResp = Invoke-WebRequest -Uri "$gatewayUrl/api/v1/reports/audit-export/?format=csv" -Method Get -Headers $headersA -UseBasicParsing
 if ($csvResp.Headers["Content-Type"] -match "text/csv" -and $csvResp.Content -match "security.login_failed") {
     Write-Host "  [OK] CSV export generated valid compliance audit trail with integrity headers!" -ForegroundColor Green
 } else {
