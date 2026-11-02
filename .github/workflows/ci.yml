@@ -12,8 +12,23 @@ concurrency:
 
 jobs:
   python-services:
-    name: Python Microservices (uv, ruff, pytest)
+    name: Python (${{ matrix.service }})
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trustgrid_admin
+          POSTGRES_PASSWORD: trustgrid_secure_password_dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         service:
@@ -21,9 +36,15 @@ jobs:
           - vendor-assessment-service
           - billing-service
           - audit-reporting-service
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Provision PostgreSQL Databases
+        run: |
+          docker cp infrastructure/docker/postgres/init-databases.sql ${{ job.services.postgres.id }}:/tmp/init.sql
+          docker exec ${{ job.services.postgres.id }} psql -U trustgrid_admin -d postgres -f /tmp/init.sql
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -31,10 +52,10 @@ jobs:
           version: "latest"
           enable-cache: true
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Lint with Ruff
         run: |
@@ -45,12 +66,14 @@ jobs:
         env:
           SECRET_KEY: test_insecure_key_ci
           JWT_SECRET_KEY: dev_insecure_jwt_secret_key_minimum_32_bytes_long_123
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
         run: |
           cd services/${{ matrix.service }}
           uv run pytest tests/ -v
 
   go-services:
-    name: Go Microservices (vet, test)
+    name: Go (${{ matrix.service }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -75,10 +98,10 @@ jobs:
       - name: Run Go Unit Tests
         run: |
           cd services/${{ matrix.service }}
-          go test -v -race ./tests/...
+          go test -v -race ./...
 
   rust-services:
-    name: Rust Microservices (clippy, test)
+    name: Rust (${{ matrix.service }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -93,11 +116,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: services/${{ matrix.service }}
 
       - name: Run Clippy
         run: |
