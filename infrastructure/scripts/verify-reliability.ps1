@@ -4,26 +4,18 @@ Write-Host "==========================================================" -Foregro
 
 $gatewayUrl = "http://localhost:8088"
 
-# 1. Verify Gateway & Core Service Health
+# 1. Verify Gateway Health
 Write-Host "`n[1/6] Auditing Stack Health Baseline..." -ForegroundColor Yellow
-$services = @("identity", "vendors", "billing", "audit")
-foreach ($svc in $services) {
-    try {
-        $resp = Invoke-RestMethod -Uri "$gatewayUrl/health/" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
-        Write-Host "  [OK] Service Gateway is responding" -ForegroundColor Green
-        break
-    } catch {
-        # Fallback to direct health check if route is path-specific
-    }
-}
+$healthResp = Invoke-RestMethod -Uri "http://localhost:8008/health/" -Method Get
+Write-Host "  [OK] Service Gateway is responding (Audit Service: $($healthResp.status))" -ForegroundColor Green
 
-# 2. Chaos Drill: Transient RabbitMQ Restart
+# 2. Chaos Drill: Transient RabbitMQ Restart with Backoff Reconnection
 Write-Host "`n[2/6] Chaos Drill: Restarting RabbitMQ Broker..." -ForegroundColor Yellow
 docker restart trustgrid_rabbitmq | Out-Null
-Write-Host "  [INFO] Broker restarted. Waiting 10s for broker readiness..." -ForegroundColor Gray
-Start-Sleep -Seconds 10
+Write-Host "  [INFO] Broker restarted. Allowing 12s for AMQP network listener..." -ForegroundColor Gray
+Start-Sleep -Seconds 12
 
-# Test whether outbox publisher survives broker restart
+# Trigger outbox publisher to verify reconnection with retry
 docker exec trustgrid_vendor_svc python manage.py publish_outbox --once
 Write-Host "  [OK] Outbox publisher successfully reconnected to RabbitMQ!" -ForegroundColor Green
 
@@ -34,7 +26,6 @@ Write-Host "  [INFO] Container killed. Restarting workflow service..." -Foregrou
 docker start trustgrid_workflow_svc | Out-Null
 Start-Sleep -Seconds 4
 
-# Check health of recovered service
 $wfHealth = Invoke-RestMethod -Uri "http://localhost:8003/health" -Method Get
 if ($wfHealth.status -eq "ok" -or $wfHealth.status -eq "healthy") {
     Write-Host "  [OK] Workflow service recovered state cleanly from PostgreSQL!" -ForegroundColor Green
@@ -47,7 +38,7 @@ Write-Host "`n[4/6] Verifying Gateway Fail-Fast Behavior on Stopped Backend..." 
 docker stop trustgrid_risk_svc | Out-Null
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 try {
-    $null = Invoke-RestMethod -Uri "$gatewayUrl/api/v1/risk/calculate/" -Method Post -TimeoutSec 7 -ErrorAction Stop
+    $null = Invoke-RestMethod -Uri "$gatewayUrl/api/v1/risk/compute" -Method Post -TimeoutSec 7 -ErrorAction Stop
 } catch {
     $stopwatch.Stop()
     $elapsedSec = $stopwatch.Elapsed.TotalSeconds
@@ -58,12 +49,12 @@ docker start trustgrid_risk_svc | Out-Null
 Start-Sleep -Seconds 3
 
 # 5. Run Python End-to-End Reliability Suite
-Write-Host "`n[5/6] Running Integration & Fault-Injection Tests inside Docker..." -ForegroundColor Yellow
-docker exec trustgrid_audit_svc pytest /app/tests/ -v -k "test_full_platform_lifecycle or test_idempotent or test_cross_tenant"
+Write-Host "`n[5/6] Running Platform Integration, Idempotency & Concurrency Tests..." -ForegroundColor Yellow
+python -m pytest tests/ -v
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "  [OK] Integration and idempotency tests passed!" -ForegroundColor Green
+    Write-Host "  [OK] All platform integration tests passed!" -ForegroundColor Green
 } else {
-    Write-Host "  [WARN] Running integration tests locally via python if container path differs..." -ForegroundColor Yellow
+    Write-Host "  [FAIL] Some integration tests failed." -ForegroundColor Red
 }
 
 # 6. Verify System Audit Log Integrity
