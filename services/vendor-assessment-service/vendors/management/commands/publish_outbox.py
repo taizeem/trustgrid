@@ -7,10 +7,24 @@ from django.core.management.base import BaseCommand
 from vendors.models import OutboxEvent, OutboxStatus
 
 class Command(BaseCommand):
-    help = "Relays pending outbox events to the RabbitMQ topic exchange"
+    help = "Relays pending outbox events to the RabbitMQ topic exchange with connection retries"
 
     def add_arguments(self, parser):
         parser.add_argument("--once", action="store_true", help="Run one poll cycle and exit")
+
+    def connect_with_retry(self, parameters, max_retries=5, backoff_seconds=3):
+        """Attempts connection to RabbitMQ with linear backoff."""
+        for attempt in range(1, max_retries + 1):
+            try:
+                self.stdout.write(self.style.NOTICE(f"Connecting to RabbitMQ (attempt {attempt}/{max_retries})..."))
+                connection = pika.BlockingConnection(parameters)
+                self.stdout.write(self.style.SUCCESS("Connected to RabbitMQ."))
+                return connection
+            except (pika.exceptions.AMQPConnectionError, ConnectionError) as exc:
+                if attempt == max_retries:
+                    raise exc
+                self.stdout.write(self.style.WARNING(f"Broker not ready yet ({exc}). Retrying in {backoff_seconds}s..."))
+                time.sleep(backoff_seconds)
 
     def handle(self, *args, **options):
         rabbitmq_host = getattr(settings, "RABBITMQ_HOST", "rabbitmq")
@@ -28,13 +42,11 @@ class Command(BaseCommand):
             heartbeat=60,
         )
 
-        self.stdout.write(self.style.SUCCESS(f"Connecting to RabbitMQ at {rabbitmq_host}:{rabbitmq_port}..."))
-        connection = pika.BlockingConnection(parameters)
+        connection = self.connect_with_retry(parameters)
         channel = connection.channel()
 
         # Declare durable exchange
         channel.exchange_declare(exchange="trustgrid.events", exchange_type="topic", durable=True)
-        # Enable publisher confirms
         channel.confirm_delivery()
 
         run_once = options.get("once", False)
@@ -55,7 +67,7 @@ class Command(BaseCommand):
                             routing_key=event.routing_key,
                             body=json.dumps(event.payload),
                             properties=pika.BasicProperties(
-                                delivery_mode=2,  # Persistent message on disk
+                                delivery_mode=2,
                                 content_type="application/json",
                                 message_id=str(event.id),
                             ),
