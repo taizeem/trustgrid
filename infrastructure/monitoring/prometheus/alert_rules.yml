@@ -1,0 +1,38 @@
+groups:
+  - name: trustgrid_platform_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Microservice instance {{ $labels.instance }} is unreachable"
+          description: "Scrape job {{ $labels.job }} has been down for more than 30 seconds."
+
+      - alert: HighErrorRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[2m])) by (service) / sum(rate(traefik_service_requests_total[2m])) by (service) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated 5xx error rate on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has experienced >5% 5xx responses over the last 2 minutes."
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[5m])) by (le, service)) > 1.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency spike on {{ $labels.service }}"
+          description: "95th percentile latency for {{ $labels.service }} exceeds 1.5 seconds for 2 continuous minutes."
+
+      - alert: RabbitMQConsumerLagSpike
+        expr: rabbitmq_queue_messages_ready > 500
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RabbitMQ Queue {{ $labels.queue }} message backlog spike"
+          description: "Queue backlog exceeds 500 unprocessed messages, indicating consumer lag or worker stalling."
