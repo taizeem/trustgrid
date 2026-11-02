@@ -7,13 +7,12 @@ from django.core.management.base import BaseCommand
 from vendors.models import OutboxEvent, OutboxStatus
 
 class Command(BaseCommand):
-    help = "Relays pending outbox events to the RabbitMQ topic exchange with connection retries"
+    help = "Relays pending outbox events to the RabbitMQ topic exchange with connection retry"
 
     def add_arguments(self, parser):
         parser.add_argument("--once", action="store_true", help="Run one poll cycle and exit")
 
-    def connect_with_retry(self, parameters, max_retries=5, backoff_seconds=3):
-        """Attempts connection to RabbitMQ with linear backoff."""
+    def connect_with_retry(self, parameters, max_retries=6, backoff_seconds=3):
         for attempt in range(1, max_retries + 1):
             try:
                 self.stdout.write(self.style.NOTICE(f"Connecting to RabbitMQ (attempt {attempt}/{max_retries})..."))
@@ -22,8 +21,9 @@ class Command(BaseCommand):
                 return connection
             except (pika.exceptions.AMQPConnectionError, ConnectionError) as exc:
                 if attempt == max_retries:
+                    self.stdout.write(self.style.ERROR(f"Failed to connect to RabbitMQ: {exc}"))
                     raise exc
-                self.stdout.write(self.style.WARNING(f"Broker not ready yet ({exc}). Retrying in {backoff_seconds}s..."))
+                self.stdout.write(self.style.WARNING(f"Broker starting up ({exc}). Retrying in {backoff_seconds}s..."))
                 time.sleep(backoff_seconds)
 
     def handle(self, *args, **options):

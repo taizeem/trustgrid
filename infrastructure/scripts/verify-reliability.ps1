@@ -70,7 +70,3 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host "`n[6/6] Verifying Cross-System Audit Log Integrity..." -ForegroundColor Yellow
 $auditCheck = docker exec trustgrid_postgres psql -U audit_user -d trustgrid_audit -t -c "SELECT COUNT(*) FROM audit_events;"
 Write-Host "  [OK] Recorded $([string]$auditCheck.Trim()) immutable audit events across reliability runs." -ForegroundColor Green
-
-Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host " Phase 12 Reliability & Chaos Suite Passed!" -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan

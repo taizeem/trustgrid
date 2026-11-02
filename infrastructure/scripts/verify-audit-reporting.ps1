@@ -124,6 +124,3 @@ Write-Host "`n[10/10] Verifying Asynchronous RabbitMQ Event Ingestion..." -Foreg
 docker exec trustgrid_audit_svc python manage.py consume_events --once
 Write-Host "  [OK] Asynchronous consumer executed poll cycle successfully." -ForegroundColor Green
 
-Write-Host "`n===============================================" -ForegroundColor Cyan
-Write-Host " Phase 11 Audit & Reporting Verified!" -ForegroundColor Cyan
-Write-Host "===============================================" -ForegroundColor Cyan
