@@ -1,15 +1,16 @@
 from django.urls import path
+
 from billing.views import (
-    PlanListView,
-    SubscriptionDetailView,
-    PlanChangeView,
-    SubscriptionCancelView,
+    CheckoutSessionView,
     EntitlementCheckView,
+    InvoiceListView,
+    PlanChangeView,
+    PlanListView,
+    StripeWebhookView,
+    SubscriptionCancelView,
+    SubscriptionDetailView,
     UsageIngestView,
     UsageSummaryView,
-    CheckoutSessionView,
-    StripeWebhookView,
-    InvoiceListView,
 )
 
 urlpatterns = [

@@ -1,5 +1,7 @@
 import uuid
+
 import pytest
+
 
 @pytest.mark.integration
 def test_full_platform_lifecycle(api_client, make_tenant_token):

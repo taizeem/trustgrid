@@ -1,16 +1,17 @@
 import hashlib
 import hmac
-import json
 import time
+
 import pytest
-from django.conf import settings
-from billing.models import Subscription, PaymentWebhookEvent, Invoice
-from billing.services.payment_provider import StripeSandboxAdapter
+
+from billing.models import PaymentWebhookEvent
 from billing.services.entitlements import EntitlementService
+from billing.services.payment_provider import StripeSandboxAdapter
+
 
 def generate_stripe_sig(payload_bytes, secret):
     timestamp = str(int(time.time()))
-    signed_payload = f"{timestamp}.".encode("utf-8") + payload_bytes
+    signed_payload = f"{timestamp}.".encode() + payload_bytes
     sig = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
     return f"t={timestamp},v1={sig}"
 

@@ -1,7 +1,10 @@
 import uuid
+
 import pytest
 from django.db import IntegrityError
-from vendors.models import Vendor, AssessmentTemplate, VendorTier, VendorLifecycleState
+
+from vendors.models import AssessmentTemplate, Vendor, VendorLifecycleState, VendorTier
+
 
 @pytest.mark.django_db
 def test_create_vendor_defaults(tenant_a):

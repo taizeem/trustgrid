@@ -1,7 +1,16 @@
 import uuid
+
 import pytest
 from rest_framework import status
-from vendors.models import OutboxEvent, OutboxStatus, Vendor, AssessmentTemplate, AssessmentSubmission
+
+from vendors.models import (
+    AssessmentSubmission,
+    AssessmentTemplate,
+    OutboxEvent,
+    OutboxStatus,
+    Vendor,
+)
+
 
 @pytest.mark.django_db
 def test_outbox_event_created_on_submission(api_client, auth_headers, tenant_a):

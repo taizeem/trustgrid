@@ -1,6 +1,8 @@
 import pytest
 from django.urls import reverse
+
 from audit.models import AuditEvent, AuditSeverity
+
 
 @pytest.mark.django_db
 def test_compliance_readiness_report(api_client, auth_headers, tenant_a):

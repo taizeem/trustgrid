@@ -1,9 +1,10 @@
-import os
-import uuid
-import time
 import json
-import urllib.request
+import os
+import time
 import urllib.error
+import urllib.request
+import uuid
+
 import jwt
 import pytest
 

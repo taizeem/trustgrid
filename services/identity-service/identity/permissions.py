@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
+
 from identity.models import Membership, RoleChoices
+
 
 class IsTenantMember(BasePermission):
     def has_permission(self, request, view):

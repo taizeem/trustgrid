@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
 
+
 class IsTenantAuthenticated(BasePermission):
     """Requires the caller to be authenticated AND present a valid tenant context claim ('tid')."""
     def has_permission(self, request, view):

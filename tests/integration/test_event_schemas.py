@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 import pytest
 
 REQUIRED_CLOUDEVENTS_KEYS = {
@@ -32,7 +33,7 @@ def test_assessment_submitted_event_contract():
         "source": "https://service.vendor.trustgrid.internal",
         "type": "vendor.assessment.submitted",
         "datacontenttype": "application/json",
-        "time": datetime.now(timezone.utc).isoformat(),
+        "time": datetime.now(UTC).isoformat(),
         "tenantid": str(uuid.uuid4()),
         "correlationid": str(uuid.uuid4()),
         "data": {

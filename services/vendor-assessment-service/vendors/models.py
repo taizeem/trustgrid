@@ -1,5 +1,7 @@
 import uuid
+
 from django.db import models
+
 
 class VendorTier(models.TextChoices):
     TIER_1 = "tier_1", "Critical / High Risk"

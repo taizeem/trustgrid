@@ -1,10 +1,13 @@
 import json
 import time
+
 import pika
 from django.conf import settings
-from django.utils import timezone
 from django.core.management.base import BaseCommand
+from django.utils import timezone
+
 from vendors.models import OutboxEvent, OutboxStatus
+
 
 class Command(BaseCommand):
     help = "Relays pending outbox events to the RabbitMQ topic exchange with connection retry"

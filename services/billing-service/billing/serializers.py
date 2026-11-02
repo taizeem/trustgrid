@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from billing.models import Plan, PlanEntitlement, Subscription, UsageRecord, Invoice
+
+from billing.models import Invoice, Plan, PlanEntitlement, Subscription, UsageRecord
+
 
 class PlanEntitlementSerializer(serializers.ModelSerializer):
     class Meta:

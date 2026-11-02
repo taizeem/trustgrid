@@ -1,7 +1,8 @@
-import uuid
 import pytest
 from django.core.exceptions import PermissionDenied
+
 from audit.models import AuditEvent, AuditSeverity
+
 
 @pytest.mark.django_db
 def test_audit_event_creation_and_immutability(tenant_a):

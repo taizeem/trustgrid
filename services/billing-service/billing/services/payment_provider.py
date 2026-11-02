@@ -1,14 +1,14 @@
 import hashlib
 import hmac
 import importlib
-import json
 import logging
-import time
 import uuid
-from datetime import datetime, timezone as dt_tz
+from datetime import UTC, datetime
+
 from django.conf import settings
 from django.utils import timezone
-from billing.models import Plan, Subscription, PaymentWebhookEvent, Invoice
+
+from billing.models import Invoice, PaymentWebhookEvent, Plan, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class StripeSandboxAdapter:
                 ).hexdigest()
                 return hmac.compare_digest(computed, sig_header.strip())
 
-            signed_payload = f"{timestamp}.".encode("utf-8") + payload_bytes
+            signed_payload = f"{timestamp}.".encode() + payload_bytes
             expected_sig = hmac.new(
                 settings.STRIPE_WEBHOOK_SECRET.encode("utf-8"),
                 signed_payload,
@@ -171,7 +171,7 @@ class StripeSandboxAdapter:
         plan = Plan.objects.filter(code=plan_code).first() or Plan.objects.first()
 
         period_end_timestamp = data_obj.get("current_period_end")
-        period_end = datetime.fromtimestamp(period_end_timestamp, tz=dt_tz.utc) if period_end_timestamp else timezone.now() + timezone.timedelta(days=30)
+        period_end = datetime.fromtimestamp(period_end_timestamp, tz=UTC) if period_end_timestamp else timezone.now() + timezone.timedelta(days=30)
 
         sub = None
         if tenant_id_str:

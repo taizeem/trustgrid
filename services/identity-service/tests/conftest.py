@@ -1,7 +1,9 @@
 import pytest
 from rest_framework.test import APIClient
-from identity.models import User, Organization, Membership, RoleChoices
+
+from identity.models import Organization, User
 from identity.tokens import generate_jwt
+
 
 @pytest.fixture
 def api_client():

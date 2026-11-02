@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from identity.models import User, Organization
+
 
 @pytest.mark.django_db
 def test_user_registration_and_login_flow(api_client):

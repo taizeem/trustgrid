@@ -1,8 +1,10 @@
 import logging
-from django.db import transaction, IntegrityError
+
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.utils import timezone
-from billing.models import UsageRecord, PlanEntitlement
+
+from billing.models import PlanEntitlement, UsageRecord
 from billing.services.entitlements import EntitlementService
 
 logger = logging.getLogger(__name__)

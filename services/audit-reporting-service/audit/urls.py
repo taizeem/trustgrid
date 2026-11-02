@@ -1,11 +1,12 @@
 from django.urls import path
+
 from audit.views import (
-    HealthCheckView,
     AuditEventsListView,
-    IngestAuditEventView,
     ComplianceReadinessReportView,
-    VendorRiskSummaryReportView,
     ExportAuditLogsView,
+    HealthCheckView,
+    IngestAuditEventView,
+    VendorRiskSummaryReportView,
 )
 
 urlpatterns = [

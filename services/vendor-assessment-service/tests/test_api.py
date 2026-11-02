@@ -1,7 +1,8 @@
-import uuid
 import pytest
 from rest_framework import status
+
 from vendors.models import AssessmentSubmissionStatus
+
 
 @pytest.mark.django_db
 def test_vendor_lifecycle_api_flow(api_client, auth_headers, tenant_a):

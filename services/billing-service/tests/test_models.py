@@ -1,7 +1,10 @@
 import uuid
+
 import pytest
 from django.utils import timezone
-from billing.models import Plan, PlanEntitlement, Subscription, UsageRecord, Invoice
+
+from billing.models import Invoice, Plan, PlanEntitlement, Subscription
+
 
 @pytest.mark.django_db
 def test_plan_and_entitlement_creation():

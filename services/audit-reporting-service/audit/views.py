@@ -1,14 +1,17 @@
 import csv
-from django.http import HttpResponse
+
 from django.db.models import Q
+from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from audit.models import AuditEvent
+from audit.permissions import CanViewAuditLogs, IsTenantAuthenticated
 from audit.serializers import AuditEventSerializer, IngestAuditEventSerializer
-from audit.permissions import IsTenantAuthenticated, CanViewAuditLogs
 from audit.services.reporting_service import ReportingService
+
 
 class StandardResultsPagination(PageNumberPagination):
     page_size = 20

@@ -1,7 +1,10 @@
-from django.db.models import Count, Q
-from django.utils import timezone
 from datetime import timedelta
+
+from django.db.models import Count
+from django.utils import timezone
+
 from audit.models import AuditEvent, AuditSeverity
+
 
 class ReportingService:
     @staticmethod

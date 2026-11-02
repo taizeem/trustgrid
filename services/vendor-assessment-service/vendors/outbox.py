@@ -1,6 +1,8 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from vendors.models import OutboxEvent, OutboxStatus
+
 
 def create_outbox_event(tenant_id, event_type, routing_key, data, correlation_id=None):
     """
@@ -14,7 +16,7 @@ def create_outbox_event(tenant_id, event_type, routing_key, data, correlation_id
         "source": "https://service.vendor.trustgrid.internal",
         "type": event_type,
         "datacontenttype": "application/json",
-        "time": datetime.now(timezone.utc).isoformat(),
+        "time": datetime.now(UTC).isoformat(),
         "tenantid": str(tenant_id),
         "correlationid": str(correlation_id or uuid.uuid4()),
         "data": data,

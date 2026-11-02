@@ -1,10 +1,13 @@
 import json
 import time
+
 import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+
 from audit.models import AuditEvent, AuditSeverity, IngestedMessageId
+
 
 class Command(BaseCommand):
     help = "Asynchronously consumes CloudEvents from RabbitMQ topic exchange to log immutable audit records."

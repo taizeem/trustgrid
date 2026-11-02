@@ -1,22 +1,24 @@
 import secrets
 from datetime import timedelta
+
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from identity.models import Organization, Membership, Invitation, RoleChoices, InvitationStatus
-from identity.tokens import generate_jwt
-from identity.permissions import IsTenantMember, IsTenantAdmin
+from identity.models import Invitation, Membership, Organization, RoleChoices
+from identity.permissions import IsTenantAdmin, IsTenantMember
 from identity.serializers import (
-    UserRegistrationSerializer,
-    LoginSerializer,
-    TenantTokenExchangeSerializer,
-    OrganizationSerializer,
-    MembershipSerializer,
     CreateInvitationSerializer,
+    LoginSerializer,
+    MembershipSerializer,
+    OrganizationSerializer,
+    TenantTokenExchangeSerializer,
+    UserRegistrationSerializer,
 )
+from identity.tokens import generate_jwt
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]

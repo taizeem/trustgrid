@@ -1,6 +1,8 @@
 import pytest
 from django.db import IntegrityError
-from identity.models import User, Organization, Membership, RoleChoices
+
+from identity.models import Membership, Organization, RoleChoices, User
+
 
 @pytest.mark.django_db
 def test_create_user_successful():

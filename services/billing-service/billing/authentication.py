@@ -1,8 +1,10 @@
 import uuid
+
 import jwt
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+
 
 class TokenUser:
     """Represents an authenticated principal reconstructed purely from verified JWT claims."""

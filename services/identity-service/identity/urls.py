@@ -1,11 +1,12 @@
 from django.urls import path
+
 from identity.views import (
-    RegisterView,
     LoginView,
-    TenantTokenExchangeView,
-    OrganizationListCreateView,
     OrganizationDetailView,
+    OrganizationListCreateView,
     OrganizationMembersView,
+    RegisterView,
+    TenantTokenExchangeView,
 )
 
 urlpatterns = [

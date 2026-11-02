@@ -1,12 +1,12 @@
 from rest_framework import serializers
+
 from vendors.models import (
-    Vendor,
-    AssessmentTemplate,
     AssessmentSubmission,
+    AssessmentTemplate,
     Evidence,
-    VendorTier,
-    VendorLifecycleState,
+    Vendor,
 )
+
 
 class VendorSerializer(serializers.ModelSerializer):
     class Meta:

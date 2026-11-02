@@ -1,12 +1,13 @@
 from django.urls import path
+
 from vendors.views import (
-    VendorListCreateView,
-    VendorDetailView,
-    TemplateListCreateView,
-    TemplateDetailView,
-    AssessmentSubmissionListCreateView,
     AssessmentSubmissionDetailView,
+    AssessmentSubmissionListCreateView,
     AssessmentSubmitActionView,
+    TemplateDetailView,
+    TemplateListCreateView,
+    VendorDetailView,
+    VendorListCreateView,
 )
 
 urlpatterns = [

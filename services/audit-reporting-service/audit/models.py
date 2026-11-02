@@ -1,8 +1,10 @@
-import uuid
 import hashlib
 import json
-from django.db import models
+import uuid
+
 from django.core.exceptions import PermissionDenied
+from django.db import models
+
 
 class AuditSeverity(models.TextChoices):
     INFO = "INFO", "Information"

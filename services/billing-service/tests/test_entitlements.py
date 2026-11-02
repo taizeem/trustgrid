@@ -1,7 +1,8 @@
 import pytest
-from django.utils import timezone
+
 from billing.models import UsageRecord
 from billing.services.entitlements import EntitlementService
+
 
 @pytest.mark.django_db
 def test_default_subscription_auto_provisioning(tenant_a, seed_plans):

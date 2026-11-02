@@ -1,6 +1,8 @@
 import pytest
+
 from billing.models import UsageRecord
 from billing.services.usage import UsageMeteringService
+
 
 @pytest.mark.django_db
 def test_usage_idempotency_prevents_duplicate_counting(tenant_a, seed_plans):

@@ -1,7 +1,9 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+
 from identity.models import User
 from identity.tokens import decode_jwt
+
 
 class JWTAuthentication(BaseAuthentication):
     def authenticate(self, request):

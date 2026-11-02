@@ -1,6 +1,8 @@
-import uuid
 import concurrent.futures
+import uuid
+
 import pytest
+
 
 @pytest.mark.integration
 def test_idempotent_duplicate_billing_events(api_client, make_tenant_token):

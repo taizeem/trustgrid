@@ -1,7 +1,8 @@
-import uuid
 import pytest
 from django.urls import reverse
-from audit.models import AuditEvent, AuditSeverity
+
+from audit.models import AuditEvent
+
 
 @pytest.mark.django_db
 def test_health_check_endpoint(api_client):

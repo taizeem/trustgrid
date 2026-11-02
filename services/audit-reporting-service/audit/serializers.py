@@ -1,5 +1,7 @@
 from rest_framework import serializers
+
 from audit.models import AuditEvent, AuditSeverity
+
 
 class AuditEventSerializer(serializers.ModelSerializer):
     class Meta:

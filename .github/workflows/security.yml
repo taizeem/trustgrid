@@ -1,0 +1,52 @@
+name: TrustGrid Production Security & Vulnerability Audit
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '0 2 * * 1' # Run weekly on Mondays at 2 AM UTC
+
+jobs:
+  trivy-fs-scan:
+    name: File System & Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '0'
+
+  python-security:
+    name: Python Bandit Security Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv & Bandit
+        uses: astral-sh/setup-uv@v3
+      - run: |
+          uv pip install --system bandit
+          bandit -r services/identity-service services/vendor-assessment-service services/billing-service services/audit-reporting-service -ll -ii || true
+
+  secrets-audit:
+    name: Git Secret Leak Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

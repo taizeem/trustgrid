@@ -1,0 +1,122 @@
+name: TrustGrid Production CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-services:
+    name: Python Microservices (uv, ruff, pytest)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - identity-service
+          - vendor-assessment-service
+          - billing-service
+          - audit-reporting-service
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint with Ruff
+        run: |
+          cd services/${{ matrix.service }}
+          uv run ruff check .
+
+      - name: Run Tests with Pytest
+        env:
+          SECRET_KEY: test_insecure_key_ci
+          JWT_SECRET_KEY: dev_insecure_jwt_secret_key_minimum_32_bytes_long_123
+        run: |
+          cd services/${{ matrix.service }}
+          uv run pytest tests/ -v
+
+  go-services:
+    name: Go Microservices (vet, test)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - workflow-service
+          - integrations-service
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
+
+      - name: Run Go Vet
+        run: |
+          cd services/${{ matrix.service }}
+          go vet ./...
+
+      - name: Run Go Unit Tests
+        run: |
+          cd services/${{ matrix.service }}
+          go test -v -race ./tests/...
+
+  rust-services:
+    name: Rust Microservices (clippy, test)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - document-service
+          - risk-service
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/${{ matrix.service }}
+
+      - name: Run Clippy
+        run: |
+          cd services/${{ matrix.service }}
+          cargo clippy --all-targets -- -D warnings
+
+      - name: Run Cargo Tests
+        run: |
+          cd services/${{ matrix.service }}
+          cargo test --verbose
+
+  docker-compose-validate:
+    name: Container Configuration & Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Config
+        run: |
+          cp .env.example .env
+          docker compose config --quiet

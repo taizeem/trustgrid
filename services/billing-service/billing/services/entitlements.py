@@ -1,7 +1,9 @@
 import logging
-from django.utils import timezone
+
 from django.db.models import Sum
-from billing.models import Plan, Subscription, PlanEntitlement, UsageRecord
+from django.utils import timezone
+
+from billing.models import Plan, PlanEntitlement, Subscription, UsageRecord
 
 logger = logging.getLogger(__name__)
 

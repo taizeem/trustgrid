@@ -1,6 +1,8 @@
 import pytest
 from rest_framework import status
-from identity.models import RoleChoices, Membership
+
+from identity.models import Membership, RoleChoices
+
 
 @pytest.mark.django_db
 def test_cross_tenant_access_blocked(api_client, create_user, create_org, auth_headers):

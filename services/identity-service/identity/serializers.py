@@ -1,6 +1,8 @@
-from rest_framework import serializers
 from django.contrib.auth import authenticate
-from identity.models import User, Organization, Membership, Invitation, RoleChoices
+from rest_framework import serializers
+
+from identity.models import Invitation, Membership, Organization, User
+
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)

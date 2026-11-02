@@ -1,7 +1,10 @@
 import uuid
+
 import pytest
 from rest_framework import status
+
 from vendors.models import Vendor
+
 
 @pytest.mark.django_db
 def test_cross_tenant_vendor_isolation(api_client, auth_headers, tenant_a, tenant_b):
