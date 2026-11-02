@@ -1,38 +1,29 @@
 
 $gatewayUrl = "http://localhost:8088"
 
-# 1. Gateway Security Headers Audit (Windows PowerShell 5.1 & PS 7 compatible)
+# 1. Gateway Security Headers Audit
 Write-Host "`n[1/5] Auditing API Gateway Security Headers..." -ForegroundColor Yellow
-$headersFound = $false
+$headers = $null
 try {
-    $req = [System.Net.HttpWebRequest]::Create("$gatewayUrl/api/v1/auth/token/")
-    $req.Method = "POST"
-    $req.ContentType = "application/json"
-    $req.Timeout = 5000
-    $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes("{}")
-    $req.ContentLength = $bodyBytes.Length
-    $stream = $req.GetRequestStream()
-    $stream.Write($bodyBytes, 0, $bodyBytes.Length)
-    $stream.Close()
-    $response = $req.GetResponse()
-} catch [System.Net.WebException] {
-    $response = $_.Exception.Response
+    $resp = Invoke-WebRequest -Uri "$gatewayUrl/api/v1/auth/token/" -Method Post -Body "{}" -ContentType "application/json" -UseBasicParsing -ErrorAction Stop
+    $headers = $resp.Headers
 } catch {
-    $response = $null
-}
-
-if ($response -and $response.Headers) {
-    $frameOptions = $response.Headers["X-Frame-Options"]
-    $hsts = $response.Headers["Strict-Transport-Security"]
-    $csp = $response.Headers["Content-Security-Policy"]
-    if ($frameOptions -eq "DENY" -or $hsts -or $csp) {
-        Write-Host "  [OK] Gateway enforces Security Headers (FrameDeny: '$frameOptions', HSTS: '$hsts')!" -ForegroundColor Green
-        $headersFound = $true
+    if ($_.Exception.Response) {
+        $headers = $_.Exception.Response.Headers
     }
 }
 
-if (-not $headersFound) {
-    Write-Host "  [WARN] Gateway security headers pending or gateway initializing." -ForegroundColor Yellow
+if ($headers) {
+    $frameOptions = $headers["X-Frame-Options"]
+    $hsts = $headers["Strict-Transport-Security"]
+    $csp = $headers["Content-Security-Policy"]
+    if ($frameOptions -eq "DENY" -or $hsts -or $csp) {
+        Write-Host "  [OK] Gateway enforces Security Headers (FrameDeny: '$frameOptions', HSTS: '$hsts')!" -ForegroundColor Green
+    } else {
+        Write-Host "  [WARN] Headers received but expected security flags were not present." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  [FAIL] Gateway was unreachable at $gatewayUrl" -ForegroundColor Red
 }
 
 # 2. All Microservices Health Verification
@@ -50,7 +41,7 @@ $services = @(
 
 foreach ($svc in $services) {
     try {
-        $res = Invoke-RestMethod -Uri $svc.Url -Method Get -TimeoutSec 4
+        $res = Invoke-RestMethod -Uri $svc.Url -Method Get -TimeoutSec 5
         Write-Host "  [OK] $($svc.Name) is healthy (Status: $($res.status))" -ForegroundColor Green
     } catch {
         Write-Host "  [FAIL] $($svc.Name) failed health check: $($_.Exception.Message)" -ForegroundColor Red
@@ -60,7 +51,7 @@ foreach ($svc in $services) {
 # 3. Observability & Telemetry Audit
 Write-Host "`n[3/5] Auditing Prometheus & Grafana Telemetry..." -ForegroundColor Yellow
 try {
-    $promTargets = Invoke-RestMethod -Uri "http://localhost:9090/api/v1/targets" -TimeoutSec 4
+    $promTargets = Invoke-RestMethod -Uri "http://localhost:9090/api/v1/targets" -TimeoutSec 5
     $activeTargets = @($promTargets.data.activeTargets | Where-Object { $_.health -eq "up" }).Count
     Write-Host "  [OK] Prometheus is scraping $activeTargets active service targets!" -ForegroundColor Green
 } catch {
@@ -79,6 +70,3 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host "  [FAIL] Some tests failed." -ForegroundColor Red
 }
-
-Write-Host "`n==========================================================" -ForegroundColor Cyan
-W
