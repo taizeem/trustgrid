@@ -6,6 +6,7 @@ http:
       rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/organizations`)"
       service: identity-service
       middlewares:
+        - security-headers
         - correlation-id
         - rate-limit
         - cors-headers
@@ -16,6 +17,7 @@ http:
       rule: "PathPrefix(`/api/v1/vendors`) || PathPrefix(`/api/v1/templates`) || PathPrefix(`/api/v1/assessments`)"
       service: vendor-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
@@ -25,6 +27,7 @@ http:
       rule: "PathPrefix(`/api/v1/workflows`) || Path(`/health`)"
       service: workflow-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
@@ -34,6 +37,7 @@ http:
       rule: "PathPrefix(`/api/v1/documents`)"
       service: document-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
@@ -43,6 +47,7 @@ http:
       rule: "PathPrefix(`/api/v1/risk`)"
       service: risk-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
@@ -52,6 +57,7 @@ http:
       rule: "PathPrefix(`/api/v1/integrations`)"
       service: integrations-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
@@ -61,6 +67,7 @@ http:
       rule: "PathPrefix(`/api/v1/billing`)"
       service: billing-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
     
@@ -70,10 +77,24 @@ http:
       rule: "PathPrefix(`/api/v1/audit`) || PathPrefix(`/api/v1/reports`)"
       service: audit-service
       middlewares:
+        - security-headers
         - correlation-id
         - cors-headers
 
   middlewares:
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "DENY"
+        referrerPolicy: "strict-origin-when-cross-origin"
+        contentSecurityPolicy: "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self';"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"
+
     correlation-id:
       headers:
         customRequestHeaders:
@@ -100,43 +121,3 @@ http:
           - X-Tenant-ID
         accessControlMaxAge: 3600
         addVaryHeader: true
-
-  services:
-    identity-service:
-      loadBalancer:
-        servers:
-          - url: "http://identity-service:8001"
-
-    vendor-service:
-      loadBalancer:
-        servers:
-          - url: "http://vendor-assessment-service:8002"
-
-    workflow-service:
-      loadBalancer:
-        servers:
-          - url: "http://workflow-service:8003"
-
-    document-service:
-      loadBalancer:
-        servers:
-          - url: "http://document-service:8004"
-
-    risk-service:
-      loadBalancer:
-        servers:
-          - url: "http://risk-service:8005"
-
-    integrations-service:
-      loadBalancer:
-        servers:
-          - url: "http://integrations-service:8006"
-
-    billing-service:
-      loadBalancer:
-        servers:
-          - url: "http://billing-service:8007"
-    audit-service:
-      loadBalancer:
-        servers:
-          - url: "http://audit-reporting-service:8008"
