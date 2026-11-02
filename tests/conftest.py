@@ -11,39 +11,42 @@ GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8088")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_insecure_jwt_secret_key_minimum_32_bytes_long_123")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-class SimpleHttpClient:
-    """Lightweight wrapper over urllib using standard library only."""
-    def __init__(self, base_url, default_headers=None):
+def pytest_configure(config):
+    config.addinivalue_line("markers", "integration: mark test as platform integration test")
+    config.addinivalue_line("markers", "contracts: mark test as event contract test")
+
+class ApiClient:
+    """Zero-dependency HTTP client using Python standard library."""
+    def __init__(self, base_url):
         self.base_url = base_url.rstrip("/")
-        self.default_headers = default_headers or {}
 
     def request(self, method, path, json_data=None, headers=None, timeout=10.0):
         url = f"{self.base_url}/{path.lstrip('/')}"
-        all_headers = {**self.default_headers, **(headers or {})}
-        body_bytes = None
+        req_headers = headers.copy() if headers else {}
+        body = None
 
         if json_data is not None:
-            body_bytes = json.dumps(json_data).encode("utf-8")
-            all_headers["Content-Type"] = "application/json"
+            body = json.dumps(json_data).encode("utf-8")
+            req_headers["Content-Type"] = "application/json"
 
-        req = urllib.request.Request(url, data=body_bytes, headers=all_headers, method=method.upper())
+        req = urllib.request.Request(url, data=body, headers=req_headers, method=method.upper())
 
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status_code = resp.status
-                raw_body = resp.read().decode("utf-8")
+                raw = resp.read().decode("utf-8")
                 try:
-                    data = json.loads(raw_body)
+                    data = json.loads(raw)
                 except Exception:
-                    data = raw_body
-                return HttpResponseMock(status_code, data, resp.headers)
+                    data = raw
+                return ResponseWrapper(status_code, data)
         except urllib.error.HTTPError as exc:
-            raw_body = exc.read().decode("utf-8")
+            raw = exc.read().decode("utf-8")
             try:
-                data = json.loads(raw_body)
+                data = json.loads(raw)
             except Exception:
-                data = raw_body
-            return HttpResponseMock(exc.code, data, exc.headers)
+                data = raw
+            return ResponseWrapper(exc.code, data)
 
     def get(self, path, headers=None):
         return self.request("GET", path, headers=headers)
@@ -52,14 +55,13 @@ class SimpleHttpClient:
         return self.request("POST", path, json_data=json, headers=headers)
 
 
-class HttpResponseMock:
-    def __init__(self, status_code, data, headers):
+class ResponseWrapper:
+    def __init__(self, status_code, data):
         self.status_code = status_code
         self._data = data
-        self.headers = headers
 
     def json(self):
-        return self._data if isinstance(self._data, dict) or isinstance(self._data, list) else {}
+        return self._data if isinstance(self._data, (dict, list)) else {}
 
 
 @pytest.fixture(scope="session")
@@ -69,7 +71,12 @@ def gateway_url():
 
 @pytest.fixture(scope="session")
 def http_client():
-    return SimpleHttpClient(base_url=GATEWAY_URL)
+    return ApiClient(GATEWAY_URL)
+
+
+@pytest.fixture(scope="session")
+def api_client(http_client):
+    return http_client
 
 
 @pytest.fixture
