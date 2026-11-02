@@ -1,18 +1,14 @@
 import uuid
-import time
-import httpx
 import pytest
 
 @pytest.mark.integration
-def test_full_platform_lifecycle(gateway_url, make_tenant_token):
-    client = httpx.Client(base_url=gateway_url, timeout=15.0)
-
-    # 1. Identity: Register user and acquire token
+def test_full_platform_lifecycle(api_client, make_tenant_token):
+    # 1. Identity: Acquire tenant admin token
     token, tenant_id, user_id = make_tenant_token(roles=["admin"])
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {token}"}
 
-    # 2. Billing: Verify entitlement quota for vendors
-    ent_resp = client.get(
+    # 2. Billing: Check tenant entitlement quota
+    ent_resp = api_client.get(
         "/api/v1/billing/entitlements/check/?feature=max_vendors&quantity=1",
         headers=headers,
     )
@@ -24,7 +20,7 @@ def test_full_platform_lifecycle(gateway_url, make_tenant_token):
         "name": f"Cloudflare Edge {uuid.uuid4().hex[:6]}",
         "website": "https://cloudflare.com",
     }
-    v_resp = client.post("/api/v1/vendors/", json=vendor_payload, headers=headers)
+    v_resp = api_client.post("/api/v1/vendors/", json=vendor_payload, headers=headers)
     assert v_resp.status_code == 201
     vendor_id = v_resp.json()["id"]
 
@@ -39,7 +35,7 @@ def test_full_platform_lifecycle(gateway_url, make_tenant_token):
             ]
         },
     }
-    t_resp = client.post("/api/v1/templates/", json=tmpl_payload, headers=headers)
+    t_resp = api_client.post("/api/v1/templates/", json=tmpl_payload, headers=headers)
     assert t_resp.status_code == 201
     template_id = t_resp.json()["id"]
 
@@ -49,16 +45,16 @@ def test_full_platform_lifecycle(gateway_url, make_tenant_token):
         "template": template_id,
         "answers": {"q1": "compliant", "q2": "compliant"},
     }
-    a_resp = client.post("/api/v1/assessments/", json=as_payload, headers=headers)
+    a_resp = api_client.post("/api/v1/assessments/", json=as_payload, headers=headers)
     assert a_resp.status_code == 201
     assessment_id = a_resp.json()["id"]
 
     # 6. Assessment: Submit (Triggers Transactional Outbox)
-    sub_resp = client.post(f"/api/v1/assessments/{assessment_id}/submit/", headers=headers)
+    sub_resp = api_client.post(f"/api/v1/assessments/{assessment_id}/submit/", headers=headers)
     assert sub_resp.status_code == 200
     assert sub_resp.json()["status"] == "SUBMITTED"
 
-    # 7. Risk Service: Compute Deterministic Risk Score
+    # 7. Risk Service: Compute Risk Score
     risk_payload = {
         "assessment_id": assessment_id,
         "answers": [
@@ -66,7 +62,7 @@ def test_full_platform_lifecycle(gateway_url, make_tenant_token):
             {"factor": "encryption", "score": 95.0, "weight": 0.6},
         ],
     }
-    risk_resp = client.post("/api/v1/risk/calculate/", json=risk_payload, headers=headers)
+    risk_resp = api_client.post("/api/v1/risk/calculate/", json=risk_payload, headers=headers)
     assert risk_resp.status_code == 200
     risk_data = risk_resp.json()
     assert risk_data["overall_score"] == 93.0
@@ -78,11 +74,11 @@ def test_full_platform_lifecycle(gateway_url, make_tenant_token):
         "events": ["assessment.approved", "workflow.state_changed"],
         "secret": "whsec_test_secret_key_12345",
     }
-    wh_resp = client.post("/api/v1/integrations/webhooks/", json=webhook_payload, headers=headers)
+    wh_resp = api_client.post("/api/v1/integrations/webhooks/", json=webhook_payload, headers=headers)
     assert wh_resp.status_code in [200, 201]
 
     # 9. Audit Service: Verify Ingested Audit Trail
-    audit_resp = client.get(
+    audit_resp = api_client.get(
         f"/api/v1/audit/events/?resource_id={vendor_id}",
         headers=headers,
     )
