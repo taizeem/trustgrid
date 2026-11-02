@@ -66,7 +66,7 @@ def test_cross_tenant_isolation_under_concurrency(api_client, make_tenant_token)
     client_b = api_client.new_session(headers={"Authorization": f"Bearer {token_b}"})
 
     # Tenant A creates vendor
-    v_a = client_a.post("/api/v1/vendors/", json={"name": "Tenant A Secret Vendor"}).json()
+    v_a = client_a.post("/api/v1/vendors/", json={"name": f"Tenant A Secret {uuid.uuid4().hex[:6]}"}).json()
     vendor_a_id = v_a.get("id")
 
     # Tenant B lists vendors
@@ -80,26 +80,49 @@ def test_cross_tenant_isolation_under_concurrency(api_client, make_tenant_token)
 def test_concurrent_workflow_transitions_optimistic_locking(api_client, make_tenant_token):
     """
     Validates that concurrent approve and reject attempts on the same workflow
-    resolve safely: exactly one transition succeeds and the other is rejected with 409 Conflict.
+    resolve safely via optimistic locking: exactly one transition succeeds and the other is rejected with 409 Conflict.
     """
     token, tenant_id, _ = make_tenant_token(roles=["admin"])
     headers = {"Authorization": f"Bearer {token}"}
 
+    # 1. Create a draft workflow
     wf_payload = {
         "assessment_id": str(uuid.uuid4()),
-        "assigned_to": str(uuid.uuid4()),
     }
-    wf_create_resp = api_client.post("/api/v1/workflows/", json=wf_payload, headers=headers)
+    wf_create_resp = api_client.post("/api/v1/workflows", json=wf_payload, headers=headers)
     if wf_create_resp.status_code != 201:
-        pytest.skip("Workflow creation endpoint requires an active pre-existing assessment submission.")
+        wf_create_resp = api_client.post("/api/v1/workflows/", json=wf_payload, headers=headers)
 
-    workflow_id = wf_create_resp.json()["id"]
+    if wf_create_resp.status_code != 201:
+        pytest.skip(f"Workflow creation endpoint returned {wf_create_resp.status_code}")
 
+    wf_data = wf_create_resp.json()
+    workflow_id = wf_data["id"]
+
+    # 2. Transition from DRAFT to IN_REVIEW
+    submit_resp = api_client.post(
+        f"/api/v1/workflows/{workflow_id}/transition",
+        json={"action": "submit", "version": 1, "comment": "Submitting for review"},
+        headers=headers,
+    )
+    assert submit_resp.status_code == 200
+    in_review_data = submit_resp.json()
+    current_version = in_review_data["version"]
+
+    # 3. Fire concurrent approve and reject requests with the SAME version
     def attempt_approve():
-        return api_client.post(f"/api/v1/workflows/{workflow_id}/approve/", headers=headers)
+        return api_client.post(
+            f"/api/v1/workflows/{workflow_id}/transition",
+            json={"action": "approve", "version": current_version, "comment": "Officer 1 approving"},
+            headers=headers,
+        )
 
     def attempt_reject():
-        return api_client.post(f"/api/v1/workflows/{workflow_id}/reject/", headers=headers)
+        return api_client.post(
+            f"/api/v1/workflows/{workflow_id}/transition",
+            json={"action": "reject", "version": current_version, "comment": "Officer 2 rejecting"},
+            headers=headers,
+        )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         f1 = executor.submit(attempt_approve)
@@ -108,5 +131,6 @@ def test_concurrent_workflow_transitions_optimistic_locking(api_client, make_ten
         res2 = f2.result()
 
     statuses = [res1.status_code, res2.status_code]
+    # Exactly one must succeed (200), and the other must be rejected with 409 Conflict
     assert 200 in statuses
-    assert (409 in statuses or 400 in statuses)
+    assert 409 in statuses
